@@ -1,0 +1,54 @@
+{
+  "name": "paseo-beads-board",
+  "version": "1.0.0",
+  "description": "Kanban board for the beads (bd) issue tracker inside Paseo, with a workspace panel, sidebar surface, and composer attachment source.",
+  "keywords": [
+    "paseo",
+    "paseo-plugin",
+    "beads",
+    "bd",
+    "kanban",
+    "issues",
+    "productivity"
+  ],
+  "homepage": "https://github.com/jmkelly/paseo-beads-board#readme",
+  "bugs": {
+    "url": "https://github.com/jmkelly/paseo-beads-board/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmkelly/paseo-beads-board.git"
+  },
+  "license": "MIT",
+  "author": "James Kelly",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test"
+  },
+  "files": [
+    "paseo-plugin.json",
+    "index.client.ts",
+    "index.client.tsx",
+    "index.server.ts",
+    "index.server.tsx",
+    "client/",
+    "server/",
+    "shared/"
+  ],
+  "devDependencies": {
+    "@getpaseo/plugin": "0.8.0",
+    "@tanstack/react-query": "^5.90.11",
+    "@types/node": "^22.20.4",
+    "@types/react": "~19.2.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7",
+    "zod": "^4.4.3"
+  }
+}
