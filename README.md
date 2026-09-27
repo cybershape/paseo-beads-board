@@ -3,6 +3,10 @@
 A Paseo plugin that turns the [beads](https://github.com/steveyegian/beads) `bd` CLI into a
 kanban board inside Paseo, inspired by [beads-web](https://github.com/weselow/beads-web).
 
+> **Pre-1.0.** Releases are `0.x`, following semver's pre-1.0 convention: features and fixes bump
+> the patch version, but a minor bump may still contain breaking changes until the plugin API and
+> the board settle at `1.0.0`. Pin an exact version if you do not want to track the latest release.
+
 The board is rendered by the Paseo app (React Native, so desktop, browser, iOS, and Android all
 work) and every data operation runs the `bd` CLI in a subprocess on the daemon host. Install the
 plugin on each host you want a board for; Paseo shows one sidebar item with a host picker and the
@@ -43,6 +47,12 @@ Paseo 0.9 and newer install from npm:
 
 ```bash
 paseo plugin install npm:paseo-beads-board
+```
+
+Pin a specific release when you do not want to track the latest one:
+
+```bash
+paseo plugin install npm:paseo-beads-board@0.1.0
 ```
 
 Paseo 0.8 installs from the repository:
@@ -125,10 +135,14 @@ paseo plugin reload beads-board
 
 Keep the plugin ID (`beads-board`) and the npm version in `package.json` in step: Paseo 0.9
 installs the npm package, and the paseo.cafe catalog uses the published version as the plugin's
-update identity, so every release needs a version bump.
+update identity, so every release needs a version bump and an `npm publish`. While the plugin is
+pre-1.0, bump with `npm version patch` for fixes and `npm version minor` for anything that may
+change existing behaviour.
 
 ## Limitations
 
+- This plugin is pre-1.0 (`0.x`). A minor version bump may contain breaking changes, so pin a
+  version if you are depending on today's behaviour.
 - The `bd` CLI must be installed on each daemon host you install this plugin on; a missing binary
   surfaces as an error on the board and in `paseo plugin logs beads-board`.
 - No drag and drop. React Native plugin code has no gesture-handler dependency, so cards move
