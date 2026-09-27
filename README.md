@@ -12,6 +12,21 @@ work) and every data operation runs the `bd` CLI in a subprocess on the daemon h
 plugin on each host you want a board for; Paseo shows one sidebar item with a host picker and the
 selected host serves its own projects.
 
+## Screenshots
+
+![The beads board inside Paseo, with Open, In Progress, and In Review columns](./images/board.png)
+
+<details>
+<summary>More screenshots</summary>
+
+![The same board with the Closed column enabled](./images/board-closed-column.png)
+
+![Bead detail: move between columns, edit fields, and read comments](./images/bead-detail.png)
+
+![Creating a bead against any discovered beads database](./images/create-bead.png)
+
+</details>
+
 ## Features
 
 - **Project discovery** — scans Paseo projects and workspaces on the host for a `.beads`
