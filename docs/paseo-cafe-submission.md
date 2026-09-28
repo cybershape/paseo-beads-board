@@ -13,7 +13,7 @@ only hand-written file is the tiny registry entry (a copy is in
 | GitHub repository| `jmkelly/paseo-beads-board`                       |
 | Plugin subpath   | *(blank — the plugin is the repository root)*     |
 | npm package      | `paseo-beads-board`                              |
-| Release channel  | stable semver, pre-1.0 — `0.1.0` (`0.x`)        |
+| Release channel  | stable semver, pre-1.0 — `0.1.1` (`0.x`)        |
 | Categories       | `productivity`                                   |
 | Platforms        | *(blank — not platform-restricted)*              |
 | Caveats          | the six lines in `registry-entry.json`           |
@@ -25,14 +25,14 @@ If you publish under a different repository or npm name, change them in `package
 
 | Requirement                                                                     | Status                                                                                                    |
 | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Repository is public on GitHub                                                    | ⬜ create `jmkelly/paseo-beads-board`, push this tree                                                      |
+| Repository is public on GitHub                                                    | ✅ `jmkelly/paseo-beads-board`                                                                           |
 | `paseo-plugin.json` id matches the registry filename                              | ✅ `beads-board`                                                                                            |
-| `package.json` has a released semantic version (not `0.0.0`)                      | ✅ `0.1.0` — publish it (see [Publish steps](#publish-steps) for the dist-tag)             |
-| npm package is public, with the same plugin id and version as the GitHub source   | ⬜ `npm publish --access public` (first run: `npm login`)                                                    |
+| `package.json` has a released semantic version (not `0.0.0`)                      | ✅ `0.1.1` — published to npm under the `latest` dist-tag                                                  |
+| npm package is public, with the same plugin id and version as the GitHub source   | ✅ `paseo-beads-board@0.1.1` on the `latest` dist-tag                                                        |
 | README has an Install section (pulled into the listing verbatim)                  | ✅ `## Install`                                                                                             |
 | README has a Limitations section (pulled into the listing)                        | ✅ `## Limitations`                                                                                         |
 | LICENSE file                                                                     | ✅ MIT                                                                                                     |
-| `images/` folder with screenshots                                                 | ⬜ optional — drop PNG/JPG screenshots in `images/` (no other file types; the catalog treats every file there as an image) |
+| `images/` folder with screenshots                                                 | ✅ four PNGs in `images/`                                                                                  |
 | Demo video                                                                       | ⬜ optional — a YouTube/Loom link in the README is auto-embedded                                            |
 | `npm test` and `npm run typecheck` scripts                                        | ✅ both, and both pass                                                                                      |
 | Registry security scan (static) passes                                            | ✅ verified locally with paseo-cafe's `scripts/plugin-security/static-scan.ts` against both the repo tree and the packed tarball — zero findings |
