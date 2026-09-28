@@ -1,6 +1,6 @@
 {
   "name": "paseo-beads-board",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Kanban board for the beads (bd) issue tracker inside Paseo, with a workspace panel, sidebar surface, and composer attachment source.",
   "keywords": [
     "paseo",
