@@ -1,8 +1,28 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { test } from "vitest";
 
+import { findBeadsRoot, hasBeadsDatabase } from "../server/bd";
 import { normalizeBoard, type RawBead } from "../server/beads";
 import { columnForStatus, statusNameForColumn } from "../shared/beads";
+
+function scratch(): string {
+  return mkdtempSync(path.join(tmpdir(), "beads-board-test-"));
+}
+
+test("hasBeadsDatabase needs a real database, not just a .beads directory", () => {
+  const root = scratch();
+  mkdirSync(path.join(root, ".beads", "eventsData"), { recursive: true });
+  writeFileSync(path.join(root, ".beads", "machine-id"), "abc");
+  assert.equal(hasBeadsDatabase(root), false, "a machine-level .beads dir is not a project database");
+  assert.equal(findBeadsRoot(path.join(root, "apps", "web", "src")), null, "walks past it instead of adopting it");
+
+  writeFileSync(path.join(root, ".beads", "config.yaml"), "issue_prefix: demo\n");
+  assert.equal(hasBeadsDatabase(root), true);
+  assert.equal(findBeadsRoot(path.join(root, "apps", "web", "src")), root, "nested dirs resolve to the database root");
+});
 
 test("columnForStatus maps the bd status vocabulary onto board columns", () => {
   assert.deepEqual(columnForStatus("open"), { column: "open", badge: null });

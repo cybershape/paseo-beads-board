@@ -171,7 +171,6 @@ export async function loadStatuses(dir: string): Promise<StatusInfo[]> {
   }
   return statuses;
 }
-
 export async function loadPrefix(dir: string): Promise<string | null> {
   const raw = await runBdJson<{ prefix?: string } | null>(dir, ["where", "--json"], 15_000);
   return asString(raw?.prefix);
@@ -190,11 +189,12 @@ export interface BoardPayload {
 export async function loadBoardPayload(dir: string, includeClosed: boolean): Promise<BoardPayload> {
   const args = ["list", "--json", "--brief", "-n", "0"];
   if (includeClosed) args.push("--all");
-  const [raw, statuses, prefix] = await Promise.all([
-    runBdJson<RawBead[]>(dir, args),
-    loadStatuses(dir),
-    loadPrefix(dir),
-  ]);
+  // Sequential on purpose: bd serialises access to its embedded database, so three
+  // parallel reads in one project cost several times what they do in a row. The board
+  // polls, so this runs constantly.
+  const raw = await runBdJson<RawBead[]>(dir, args);
+  const statuses = await loadStatuses(dir);
+  const prefix = await loadPrefix(dir);
   const { beads, counts, truncated } = normalizeBoard(raw ?? []);
   return { path: dir, name: projectName(dir), prefix, statuses, counts, beads, truncated };
 }

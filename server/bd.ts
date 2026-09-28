@@ -88,9 +88,17 @@ export async function runBdText(cwd: string, args: string[], timeoutMs?: number)
   return result.stdout.trim();
 }
 
+/**
+ * Files beads writes into `.beads` once a database is initialized there. Beads also
+ * keeps a machine-level `~/.beads` for event data, so a bare directory is not proof
+ * of a project database.
+ */
+const DATABASE_MARKERS = ["config.yaml", "metadata.json", "issues.db"];
+
 export function hasBeadsDatabase(dir: string): boolean {
   try {
-    return existsSync(path.join(dir, ".beads"));
+    const beadsDir = path.join(dir, ".beads");
+    return DATABASE_MARKERS.some((marker) => existsSync(path.join(beadsDir, marker)));
   } catch {
     return false;
   }

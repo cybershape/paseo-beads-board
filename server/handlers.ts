@@ -2,9 +2,15 @@ import path from "node:path";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import { beadDetailSchema, type Bead, type ProjectSummary } from "../shared/beads";
 import { BdError, findBeadsRoot, hasBeadsDatabase, projectName, runBdJson, runBdText } from "./bd";
-import { loadBoardPayload, loadPrefix, normalizeBoard, type RawBead } from "./beads";
+import { loadBoardPayload, normalizeBoard, type RawBead } from "./beads";
 
 const MAX_PROJECTS = 40;
+/**
+ * Beads runs on an embedded database that serialises writers per data directory, so
+ * concurrent `bd` processes in one project crawl. Two per project is cheap; a wide
+ * fan-out across projects is not.
+ */
+const MAX_CONCURRENT_BD = 4;
 
 interface Candidate {
   dir: string;
@@ -65,6 +71,16 @@ interface StatusSummary {
   };
 }
 
+function count(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * Ask `bd` for its own overview instead of pulling the whole issue list and counting
+ * it here. `status` covers the totals, `where` the issue prefix, and `count` the one
+ * column beads has no summary bucket for. Three cheap reads beat one heavy one, and
+ * they keep the RPC well inside the daemon's 30s budget.
+ */
 async function summarize(candidate: Candidate): Promise<ProjectSummary> {
   const base: ProjectSummary = {
     path: candidate.dir,
@@ -79,28 +95,66 @@ async function summarize(candidate: Candidate): Promise<ProjectSummary> {
     error: null,
   };
   try {
-    const [status, prefix, board] = await Promise.all([
-      runBdJson<StatusSummary>(candidate.dir, ["status", "--json"], 20_000),
-      loadPrefix(candidate.dir),
-      runBdJson<RawBead[]>(candidate.dir, ["list", "--json", "--brief", "--all", "-n", "0"]).catch(
-        (): RawBead[] => [],
-      ),
-    ]);
-    const normalized = normalizeBoard(board);
+    const status = await runBdJson<StatusSummary>(candidate.dir, ["status", "--json", "--no-activity"], 20_000);
+    const inReview = await runBdJson<{ count?: number } | null>(
+      candidate.dir,
+      ["count", "--json", "--status", "inreview"],
+      15_000,
+    ).catch(() => null);
+    const where = await runBdJson<{ prefix?: string } | null>(candidate.dir, ["where", "--json"], 15_000);
     const summary = status?.summary ?? {};
+    const prefix = typeof where?.prefix === "string" && where.prefix.length > 0 ? where.prefix : null;
     return {
       ...base,
       prefix,
-      total: normalized.counts.total || summary.total_issues || 0,
-      open: normalized.counts.open || summary.open_issues || 0,
-      inProgress: normalized.counts.in_progress || summary.in_progress_issues || 0,
-      inReview: normalized.counts.in_review,
-      closed: normalized.counts.closed || summary.closed_issues || 0,
-      blocked: normalized.counts.blocked || summary.blocked_issues || 0,
+      total: count(summary.total_issues),
+      open: count(summary.open_issues),
+      inProgress: count(summary.in_progress_issues),
+      inReview: count(inReview?.count),
+      closed: count(summary.closed_issues),
+      blocked: count(summary.blocked_issues),
     };
   } catch (error) {
     return { ...base, error: error instanceof Error ? error.message : String(error) };
   }
+}
+
+/** Run `bd` for each project with a bounded fan-out, preserving input order. */
+async function mapWithConcurrency<T, R>(items: T[], limit: number, run: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await run(items[index] as T);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * Collapse candidates onto the beads database that actually holds them. Every Paseo
+ * worktree of a project points at the same database, and summarising each one
+ * separately used to fan a dozen `bd` processes at a single embedded database.
+ */
+function resolveDatabaseRoots(candidates: Candidate[]): Candidate[] {
+  const byRoot = new Map<string, Candidate>();
+  for (const candidate of candidates) {
+    const root = hasBeadsDatabase(candidate.dir) ? candidate.dir : findBeadsRoot(candidate.dir);
+    if (!root) continue;
+    const existing = byRoot.get(root);
+    if (existing) {
+      existing.extra = existing.extra || candidate.extra;
+      continue;
+    }
+    byRoot.set(root, {
+      dir: root,
+      name: candidate.dir === root ? candidate.name : projectName(root),
+      extra: candidate.extra,
+    });
+  }
+  return [...byRoot.values()];
 }
 
 export async function handleListProjects(
@@ -108,10 +162,8 @@ export async function handleListProjects(
   context: PluginHandlerContext,
 ) {
   const candidates = await collectCandidates(extraPaths, context);
-  const withDatabase = candidates.filter(
-    (candidate) => hasBeadsDatabase(candidate.dir) || findBeadsRoot(candidate.dir) !== null,
-  );
-  const projects = await Promise.all(withDatabase.map(summarize));
+  const withDatabase = resolveDatabaseRoots(candidates);
+  const projects = await mapWithConcurrency(withDatabase, MAX_CONCURRENT_BD, summarize);
   projects.sort((a, b) => {
     if (a.error && !b.error) return 1;
     if (b.error && !a.error) return -1;
@@ -132,15 +184,17 @@ export async function handleShowBead({ path: dir, id }: { path: string; id: stri
   const root = hasBeadsDatabase(dir) ? dir : findBeadsRoot(dir);
   if (!root) throw new Error(`No beads database found at ${dir}.`);
 
-  const [rows, comments, board] = await Promise.all([
-    runBdJson<RawBead[]>(root, ["show", id, "--json"]),
-    runBdJson<{ id?: string; author?: string; text?: string; created_at?: string }[]>(root, [
-      "comments",
-      id,
-      "--json",
-    ]).catch(() => []),
-    runBdJson<RawBead[]>(root, ["list", "--json", "--brief", "--all", "-n", "0"]).catch((): RawBead[] => []),
-  ]);
+  // Sequential: bd serialises access to one database, so parallel reads here cost
+  // seconds each. The detail pane is not on a hot path.
+  const rows = await runBdJson<RawBead[]>(root, ["show", id, "--json"]);
+  const comments = await runBdJson<{ id?: string; author?: string; text?: string; created_at?: string }[]>(root, [
+    "comments",
+    id,
+    "--json",
+  ]).catch(() => []);
+  const board = await runBdJson<RawBead[]>(root, ["list", "--json", "--brief", "--all", "-n", "0"]).catch(
+    (): RawBead[] => [],
+  );
 
   const row = (rows ?? [])[0];
   if (!row) throw new Error(`Bead ${id} was not found in ${root}.`);
@@ -311,11 +365,10 @@ export async function handleSearchBeads(
   const term = query.trim();
   if (!term || roots.length === 0) return { items: [] };
 
-  const perRoot = await Promise.all(
-    roots.slice(0, 12).map(async (root) => {
-      const rows = await runBdJson<RawBead[]>(root, ["list", "--json", "--brief", "-n", "0", "--all"]).catch(
-        (): RawBead[] => [],
-      );
+  const perRoot = await mapWithConcurrency(roots.slice(0, 12), MAX_CONCURRENT_BD, async (root) => {
+    const rows = await runBdJson<RawBead[]>(root, ["list", "--json", "--brief", "-n", "0", "--all"]).catch(
+      (): RawBead[] => [],
+    );
       const normalized = normalizeBoard(rows ?? []);
       const needle = term.toLowerCase();
       return normalized.beads
@@ -323,10 +376,9 @@ export async function handleSearchBeads(
           (bead) =>
             bead.id.toLowerCase().includes(needle) || bead.title.toLowerCase().includes(needle),
         )
-        .slice(0, 20)
-        .map((bead) => ({ bead, root }));
-    }),
-  );
+      .slice(0, 20)
+      .map((bead) => ({ bead, root }));
+  });
 
   const items = perRoot
     .flat()
