@@ -29,8 +29,9 @@ selected host serves its own projects.
 
 ## Features
 
-- **Project discovery** — scans Paseo projects and workspaces on the host for a `.beads`
-  directory, plus any extra paths you add in settings.
+- **Project discovery** — scans Paseo projects and workspaces on the host for an initialized beads
+  database, plus any extra paths you add in settings. Worktrees that share a database are collapsed
+  onto it, so each project is listed once.
 - **Kanban board** — Open / In Progress / In Review / Closed, with the same status mapping as
   beads-web (`blocked`, `deferred`, `pinned` show as badges on Open; `hooked` shows on In
   Progress; `tombstone` is hidden).
@@ -126,7 +127,7 @@ tests/                unit tests for the status mapping and board normalization
 
 | RPC              | Runs                                    |
 | ---------------- | --------------------------------------- |
-| `beads.projects` | `bd status --json`, `bd where --json`, `bd list --json --brief --all` |
+| `beads.projects` | `bd status --json`, `bd count --json --status inreview`, `bd where --json` |
 | `beads.board`    | `bd list`, `bd statuses --json`, `bd where --json` |
 | `beads.show`     | `bd show <id> --json`, `bd comments <id> --json` |
 | `beads.create`   | `bd create --json`                      |
@@ -135,8 +136,10 @@ tests/                unit tests for the status mapping and board normalization
 | `beads.search`   | `bd list --json --brief --all`          |
 
 Discovery uses the daemon's Paseo API (`projects.list()`, `workspaces.list()`) to find candidate
-directories, and a directory must contain `.beads` (or a `.beads` directory within four parent
-levels) to appear on the board.
+directories, and a directory appears on the board when `.beads` holds an initialized database
+(`config.yaml`, `metadata.json`, or `issues.db`) — directly, or within four parent levels. Each
+database is listed once however many Paseo worktrees point at it, and the counts come from `bd`'s
+own `status` summary rather than a full issue list.
 
 ## Development
 

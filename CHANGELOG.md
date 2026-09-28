@@ -5,6 +5,22 @@ identity: the paseo.cafe catalog uses `package.json.version` to show and track u
 and publish to npm for every user-visible change. Releases are `0.x` (semver pre-1.0): patch
 versions are safe upgrades, minor versions may still contain breaking changes.
 
+## 0.1.1
+
+Fix for beads-enabled projects not showing up in the project picker.
+
+- The project list no longer times out against the daemon's 30s plugin RPC limit. Two causes: a
+  bare `.beads` directory counted as a database, so every Paseo worktree adopted the
+  machine-level `~/.beads` event directory as its own project; and each surviving candidate ran
+  three `bd` processes in parallel against a single embedded database.
+- A directory counts as a beads database only when `config.yaml`, `metadata.json`, or `issues.db`
+  is present in `.beads`.
+- Projects and workspaces that share a database are collapsed onto it, so each database is
+  summarised once instead of once per worktree.
+- Project counts now come from `bd status --json`, `bd count --json --status inreview`, and
+  `bd where --json`, instead of pulling every issue and counting locally. `bd` calls within one
+  project run in sequence, which is several times faster against an embedded database.
+
 ## 0.1.0
 
 First public release. The board is feature complete and usable, and the plugin behaves as
