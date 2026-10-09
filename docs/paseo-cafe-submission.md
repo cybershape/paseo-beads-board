@@ -34,7 +34,7 @@ If you publish under a different repository or npm name, change them in `package
 | LICENSE file                                                                     | ✅ MIT                                                                                                     |
 | `images/` folder with screenshots                                                 | ✅ four PNGs in `images/`                                                                                  |
 | Demo video                                                                       | ⬜ optional — a YouTube/Loom link in the README is auto-embedded                                            |
-| `npm test` and `npm run typecheck` scripts                                        | ✅ both, and both pass                                                                                      |
+| `pnpm test` and `pnpm run typecheck` scripts                                        | ✅ both, and both pass                                                                                      |
 | Registry security scan (static) passes                                            | ✅ verified locally with paseo-cafe's `scripts/plugin-security/static-scan.ts` against both the repo tree and the packed tarball — zero findings |
 
 ## Publish steps
@@ -44,13 +44,13 @@ Bump the version before publishing. The plugin is pre-1.0, so `patch` is a safe 
 
 ```bash
 # from the repository root
-npm install
-npm run typecheck
-npm test
-npm version patch          # 0.1.0 -> 0.1.1, for fixes
-npm version minor          # 0.1.0 -> 0.2.0, for features or breaking changes
-npm pack --dry-run     # confirm the tarball holds paseo-plugin.json, index.*, client/, server/, shared/
-npm publish --access public
+pnpm install
+pnpm run typecheck
+pnpm test
+pnpm version patch          # 0.1.0 -> 0.1.1, for fixes
+pnpm version minor          # 0.1.0 -> 0.2.0, for features or breaking changes
+pnpm pack --dry-run     # confirm the tarball holds paseo-plugin.json, index.*, client/, server/, shared/
+pnpm publish --access public
 ```
 
 Publish with the default `latest` dist-tag. The paseo.cafe catalog binds a plugin's npm identity to
@@ -66,8 +66,8 @@ paseo plugin install npm:paseo-beads-board@0.1.0
 Verify the published manifest carries the same plugin id and version as the source:
 
 ```bash
-npm view paseo-beads-board version
-npm view paseo-beads-board dist.tarball
+pnpm view paseo-beads-board version
+pnpm view paseo-beads-board dist.tarball
 ```
 
 ## Submit
@@ -87,9 +87,9 @@ The manual fallback, if the issue form cannot express the change: copy
 ## After the listing is live
 
 The catalog treats `package.json.version` as this plugin's update identity, so every user-visible
-change needs a version bump and a `npm publish` — a new npm release is what the six-hour scans pick
+change needs a version bump and a `pnpm publish` — a new npm release is what the six-hour scans pick
 up (downloads, publish date). Push the matching commit to GitHub too, since Paseo 0.8 installs from
-the repository. While the plugin is pre-1.0, `npm version patch` / `npm version minor` keeps both
+the repository. While the plugin is pre-1.0, `pnpm version patch` / `pnpm version minor` keeps both
 in step.
 
 ## What the catalog reads from this repository
@@ -99,7 +99,7 @@ in step.
 - Author and license — `package.json.author` / `LICENSE`.
 - Version — `package.json.version` (must equal the published npm version).
 - Install and limitations notes — the `## Install` and `## Limitations` sections of `README.md`.
-- Health badges — manifest id validity, README/LICENSE presence, `npm test`, `npm run typecheck`,
+- Health badges — manifest id validity, README/LICENSE presence, `pnpm test`, `pnpm run typecheck`,
   and recency.
 - Screenshots — files in `images/`. Videos — YouTube/Loom links in the README.
 - Security attestation — the default-branch commit scanned by the registry.

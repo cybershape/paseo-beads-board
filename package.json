@@ -21,6 +21,7 @@
   },
   "license": "MIT",
   "author": "James Kelly",
+  "packageManager": "pnpm@12.10.1",
   "engines": {
     "node": ">=22.18.0"
   },
@@ -28,7 +29,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run typecheck && npm test"
+    "prepublishOnly": "pnpm run typecheck && pnpm test"
   },
   "files": [
     "paseo-plugin.json",

@@ -80,12 +80,12 @@ paseo plugin add jmkelly/paseo-beads-board
 The daemon must have plugins enabled. Check with `paseo daemon status --json`; the file is
 `<home>/config.json` and needs a root `"pluginsEnabled": true`, followed by `paseo reload`.
 
-From a clone of this repository:
+From a clone of this repository (using pnpm 12.10.1):
 
 ```bash
-npm install
-npm run typecheck
-npm test
+pnpm install
+pnpm run typecheck
+pnpm test
 paseo plugin install /absolute/path/to/paseo-beads-board
 paseo plugin ls
 paseo plugin logs beads-board
@@ -143,18 +143,21 @@ own `status` summary rather than a full issue list.
 
 ## Development
 
+This project uses pnpm 12.10.1, pinned in `package.json`. Keep `pnpm-lock.yaml` as the only
+package-manager lockfile.
+
 ```bash
-npm install
-npm run typecheck
-npm test
+pnpm install
+pnpm run typecheck
+pnpm test
 paseo plugin install /absolute/path/to/paseo-beads-board
 paseo plugin reload beads-board
 ```
 
 Keep the plugin ID (`beads-board`) and the npm version in `package.json` in step: Paseo 0.9
 installs the npm package, and the paseo.cafe catalog uses the published version as the plugin's
-update identity, so every release needs a version bump and an `npm publish`. While the plugin is
-pre-1.0, bump with `npm version patch` for fixes and `npm version minor` for anything that may
+update identity, so every release needs a version bump and a `pnpm publish`. While the plugin is
+pre-1.0, bump with `pnpm version patch` for fixes and `pnpm version minor` for anything that may
 change existing behaviour.
 
 ## Limitations
@@ -176,8 +179,8 @@ change existing behaviour.
 ## Contributing
 
 Issues and pull requests are welcome at
-<https://github.com/jmkelly/paseo-beads-board/issues>. Please run `npm run typecheck` and
-`npm test` before opening a pull request.
+<https://github.com/jmkelly/paseo-beads-board/issues>. Please run `pnpm run typecheck` and
+`pnpm test` before opening a pull request.
 
 ## License
 
