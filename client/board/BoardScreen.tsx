@@ -20,7 +20,7 @@ import {
 } from "../hooks";
 import { BeadDetail } from "./BeadDetail";
 import { ColumnView } from "./ColumnView";
-import { COLUMN_GAP, columnWidthForBoard } from "./layout";
+import { COLUMN_GAP, columnWidthForBoard, visibleColumnsForBoard } from "./layout";
 import { CreateBead } from "./CreateBead";
 import { ProjectPicker } from "./ProjectPicker";
 
@@ -111,8 +111,9 @@ export function BoardScreen({
     () => groupByColumn(filterBeads(board?.beads ?? [], { term, onlyBlocked })),
     [board?.beads, term, onlyBlocked],
   );
-  const visibleColumns = showClosed ? COLUMN_ORDER : COLUMN_ORDER.filter((column) => column !== "closed");
+  const visibleColumns = visibleColumnsForBoard(COLUMN_ORDER, showClosed, columns.in_review.length);
   const columnWidth = columnWidthForBoard(boardWidth, visibleColumns.length);
+  const displayedColumn = visibleColumns.includes(activeColumn) ? activeColumn : "open";
 
   const warnings = useMemo(
     () => (detail ? closeWarnings(detail.bead, board?.beads ?? []) : []),
@@ -282,9 +283,9 @@ export function BoardScreen({
               accessibilityRole="button"
               accessibilityLabel={`Show ${COLUMN_TITLES[column]}`}
               onPress={() => setActiveColumn(column)}
-              style={[styles.tab, activeColumn === column ? styles.tabActive : null]}
+              style={[styles.tab, displayedColumn === column ? styles.tabActive : null]}
             >
-              <Text style={activeColumn === column ? styles.tabActiveText : styles.tabText}>
+              <Text style={displayedColumn === column ? styles.tabActiveText : styles.tabText}>
                 {COLUMN_TITLES[column]} ({columns[column].length})
               </Text>
             </Pressable>
@@ -298,16 +299,14 @@ export function BoardScreen({
       >
         {board ? (
           compact ? (
-            visibleColumns.includes(activeColumn) ? (
-              <ColumnView
-                column={activeColumn}
-                beads={columns[activeColumn]}
-                theme={theme}
-                compact
-                onSelectBead={(bead) => setSelectedBeadId(bead.id)}
-                onCopyId={(bead) => void copyId(bead)}
-              />
-            ) : null
+            <ColumnView
+              column={displayedColumn}
+              beads={columns[displayedColumn]}
+              theme={theme}
+              compact
+              onSelectBead={(bead) => setSelectedBeadId(bead.id)}
+              onCopyId={(bead) => void copyId(bead)}
+            />
           ) : (
             <ScrollView
               horizontal
