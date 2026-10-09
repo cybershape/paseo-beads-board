@@ -52,7 +52,7 @@ export function ColumnView({ column, beads, theme, compact, width, onSelectBead,
 
 function createStyles(theme: PluginTheme, compact: boolean) {
   return StyleSheet.create({
-    column: { flex: compact ? 1 : undefined, gap: 8 },
+    column: { flex: compact ? 1 : undefined, flexShrink: compact ? 1 : 0, gap: 8 },
     header: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 2 },
     title: { color: theme.colors.foreground, fontSize: 13, fontWeight: "600" },
     count: {

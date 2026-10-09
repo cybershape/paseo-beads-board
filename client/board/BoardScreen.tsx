@@ -3,7 +3,7 @@ import { usePaseo } from "@getpaseo/plugin/client";
 import type { PluginTheme } from "@getpaseo/plugin";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, Text, TextInput, useWindowDimensions, View, StyleSheet } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View, StyleSheet } from "react-native";
 import { COLUMN_TITLES, type Bead, type Column, type ProjectSummary } from "../../shared/beads";
 import {
   COLUMN_ORDER,
@@ -20,6 +20,7 @@ import {
 } from "../hooks";
 import { BeadDetail } from "./BeadDetail";
 import { ColumnView } from "./ColumnView";
+import { COLUMN_GAP, columnWidthForBoard } from "./layout";
 import { CreateBead } from "./CreateBead";
 import { ProjectPicker } from "./ProjectPicker";
 
@@ -44,7 +45,7 @@ export function BoardScreen({
   openWorkspace,
 }: BoardScreenProps) {
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
-  const { width } = useWindowDimensions();
+  const [boardWidth, setBoardWidth] = useState(0);
   const toast = useToast();
   const paseo = usePaseo();
   const preferences = usePreferences();
@@ -111,6 +112,7 @@ export function BoardScreen({
     [board?.beads, term, onlyBlocked],
   );
   const visibleColumns = showClosed ? COLUMN_ORDER : COLUMN_ORDER.filter((column) => column !== "closed");
+  const columnWidth = columnWidthForBoard(boardWidth, visibleColumns.length);
 
   const warnings = useMemo(
     () => (detail ? closeWarnings(detail.bead, board?.beads ?? []) : []),
@@ -290,7 +292,10 @@ export function BoardScreen({
         </View>
       ) : null}
 
-      <View style={styles.board}>
+      <View
+        style={styles.board}
+        onLayout={(event) => setBoardWidth(event.nativeEvent.layout.width)}
+      >
         {board ? (
           compact ? (
             visibleColumns.includes(activeColumn) ? (
@@ -304,18 +309,24 @@ export function BoardScreen({
               />
             ) : null
           ) : (
-            visibleColumns.map((column) => (
-              <ColumnView
-                key={column}
-                column={column}
-                beads={columns[column]}
-                theme={theme}
-                compact={false}
-                width={Math.max(220, (width - 80) / visibleColumns.length)}
-                onSelectBead={(bead) => setSelectedBeadId(bead.id)}
-                onCopyId={(bead) => void copyId(bead)}
-              />
-            ))
+            <ScrollView
+              horizontal
+              style={styles.boardScroll}
+              contentContainerStyle={styles.boardColumns}
+            >
+              {visibleColumns.map((column) => (
+                <ColumnView
+                  key={column}
+                  column={column}
+                  beads={columns[column]}
+                  theme={theme}
+                  compact={false}
+                  width={columnWidth}
+                  onSelectBead={(bead) => setSelectedBeadId(bead.id)}
+                  onCopyId={(bead) => void copyId(bead)}
+                />
+              ))}
+            </ScrollView>
           )
         ) : null}
       </View>
@@ -486,7 +497,9 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     tabActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
     tabText: { color: theme.colors.foregroundMuted, fontSize: 12 },
     tabActiveText: { color: theme.colors.accentForeground, fontSize: 12, fontWeight: "600" },
-    board: { flex: 1, flexDirection: "row", gap: 12, minHeight: 0 },
+    board: { flex: 1, flexDirection: "row", minWidth: 0, minHeight: 0 },
+    boardScroll: { flex: 1, minWidth: 0, minHeight: 0 },
+    boardColumns: { flexDirection: "row", gap: COLUMN_GAP, flexGrow: 1 },
     error: { color: theme.colors.statusDanger, fontSize: 12 },
     warning: { color: theme.colors.statusWarning, fontSize: 11 },
     empty: { color: theme.colors.foregroundMuted, fontSize: 12, padding: 8 },
