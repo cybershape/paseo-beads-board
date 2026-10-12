@@ -1,5 +1,5 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, Text, View, StyleSheet } from "react-native";
 import type { PluginTheme } from "@getpaseo/plugin";
 import type { Bead } from "../../shared/beads";
@@ -22,6 +22,7 @@ export interface BeadCardProps {
 
 export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardProps) {
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
+  const [hovered, setHovered] = useState(false);
   const progress = bead.childIds.length > 0 ? bead.closedChildCount / bead.childIds.length : 0;
   const priorityColor = PRIORITY_COLORS[String(bead.priority)] ?? PRIORITY_COLORS["2"];
 
@@ -30,7 +31,13 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
       accessibilityRole="button"
       accessibilityLabel={`${bead.id}: ${bead.title}`}
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed ? styles.cardPressed : null]}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      style={({ pressed }) => [
+        styles.card,
+        pressed ? styles.cardPressed : null,
+        hovered && bead.blocked ? styles.cardRaised : null,
+      ]}
     >
       <View style={styles.header}>
         <View style={[styles.priority, { backgroundColor: priorityColor }]}>
@@ -96,11 +103,27 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
           </View>
         ) : null}
       </View>
+      {hovered && bead.blocked ? <BlockedHint bead={bead} styles={styles} /> : null}
     </Pressable>
   );
 }
 
 type Styles = ReturnType<typeof createStyles>;
+
+function BlockedHint({ bead, styles }: { bead: Bead; styles: Styles }) {
+  const lines = ["Blocked"];
+  if (bead.blockedBy.length > 0) lines.push(`Blocked by ${bead.blockedBy.join(", ")}`);
+  if (bead.blocks.length > 0) lines.push(`Blocks ${bead.blocks.join(", ")}`);
+  return (
+    <View style={styles.tooltip} pointerEvents="none">
+      {lines.map((line) => (
+        <Text key={line} style={styles.tooltipText}>
+          {line}
+        </Text>
+      ))}
+    </View>
+  );
+}
 
 function createStyles(theme: PluginTheme, compact: boolean) {
   return StyleSheet.create({
@@ -113,6 +136,22 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       gap: 6,
     },
     cardPressed: { opacity: 0.7 },
+    cardRaised: { zIndex: 2 },
+    tooltip: {
+      position: "absolute",
+      top: compact ? 28 : 30,
+      left: compact ? 8 : 10,
+      right: compact ? 8 : 10,
+      zIndex: 3,
+      gap: 2,
+      backgroundColor: theme.colors.surface0,
+      borderColor: theme.colors.border,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 6,
+    },
+    tooltipText: { color: theme.colors.foreground, fontSize: 11 },
     header: { flexDirection: "row", alignItems: "center", gap: 6 },
     spacer: { flex: 1 },
     priority: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
