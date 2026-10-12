@@ -22,6 +22,7 @@ export interface BeadDetailProps {
   closeWarnings: string[];
   onSave(fields: { title?: string; description?: string; notes?: string; assignee?: string; priority?: number }): void;
   onLabels(change: { add: string[]; remove: string[] }): void;
+  onOpen(id: string): void;
   onComment(text: string): void;
   description: string | null;
   design: string | null;
@@ -31,7 +32,8 @@ export interface BeadDetailProps {
 }
 
 export function BeadDetail(props: BeadDetailProps) {
-  const { bead, statuses, theme, compact, busy, onClose, onMove, onSave, onLabels, onComment, openInPaseo } = props;
+  const { bead, statuses, theme, compact, busy, onClose, onMove, onSave, onLabels, onOpen, onComment, openInPaseo } =
+    props;
   const [confirmClose, setConfirmClose] = useState(false);
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
   const toast = useToast();
@@ -126,6 +128,24 @@ export function BeadDetail(props: BeadDetailProps) {
             <Icon name="Copy" size={16} color={theme.colors.foregroundMuted} />
           </Pressable>
         </View>
+
+        {bead.blocked || bead.blockedBy.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.label}>Blocked by</Text>
+            {bead.blockedBy.length === 0 ? <Text style={styles.muted}>Blocked</Text> : null}
+            {bead.blockedBy.map((id) => (
+              <Pressable
+                key={id}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${id}`}
+                onPress={() => onOpen(id)}
+                style={styles.relation}
+              >
+                <Text style={styles.link}>{id}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <View style={styles.row}>
@@ -287,15 +307,12 @@ export function BeadDetail(props: BeadDetailProps) {
           </View>
         ) : null}
 
-        {bead.blockedBy.length > 0 || bead.blocks.length > 0 || bead.childIds.length > 0 ? (
+        {bead.parentId || bead.blocks.length > 0 || bead.childIds.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.label}>Relations</Text>
             {bead.parentId ? <RelationRow label="Parent" value={bead.parentId} theme={theme} styles={styles} /> : null}
             {bead.childIds.map((id) => (
               <RelationRow key={`child-${id}`} label="Child" value={id} theme={theme} styles={styles} />
-            ))}
-            {bead.blockedBy.map((id) => (
-              <RelationRow key={`blocked-${id}`} label="Blocked by" value={id} theme={theme} styles={styles} />
             ))}
             {bead.blocks.map((id) => (
               <RelationRow key={`blocks-${id}`} label="Blocks" value={id} theme={theme} styles={styles} />

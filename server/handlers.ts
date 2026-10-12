@@ -2,7 +2,7 @@ import path from "node:path";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import { beadDetailSchema, type Bead, type ProjectSummary } from "../shared/beads";
 import { BdError, findBeadsRoot, hasBeadsDatabase, projectName, runBdJson, runBdText } from "./bd";
-import { loadBoardPayload, normalizeBoard, type RawBead } from "./beads";
+import { loadBoardPayload, mergeShownBead, normalizeBoard, type RawBead } from "./beads";
 
 const MAX_PROJECTS = 40;
 /**
@@ -202,7 +202,7 @@ export async function handleShowBead({ path: dir, id }: { path: string; id: stri
   const normalized = normalizeBoard(board);
   const base: Bead | undefined = normalized.beads.find((bead) => bead.id === id);
   const fromRow = normalizeBoard([row]).beads[0];
-  const bead: Bead = { ...(base ?? fromRow), ...(fromRow ?? {}) };
+  const bead: Bead = mergeShownBead(base, fromRow);
 
   return beadDetailSchema.parse({
     bead,

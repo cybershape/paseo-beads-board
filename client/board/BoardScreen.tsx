@@ -90,6 +90,10 @@ export function BoardScreen({
   const actions = useBeadActions(selectedPath);
   const detailQuery = useBeadDetail(selectedPath, selectedBeadId);
   const detail = detailQuery.data ?? null;
+  const shownDetailRef = useRef(detail);
+  if (!selectedBeadId) shownDetailRef.current = null;
+  else if (detail?.bead.id === selectedBeadId) shownDetailRef.current = detail;
+  const shownDetail = shownDetailRef.current;
 
   const workspacesQuery = useQuery({
     queryKey: ["beads", "workspaces", hostId, selectedPath],
@@ -116,8 +120,8 @@ export function BoardScreen({
   const displayedColumn = visibleColumns.includes(activeColumn) ? activeColumn : "open";
 
   const warnings = useMemo(
-    () => (detail ? closeWarnings(detail.bead, board?.beads ?? []) : []),
-    [detail, board?.beads],
+    () => (shownDetail ? closeWarnings(shownDetail.bead, board?.beads ?? []) : []),
+    [shownDetail, board?.beads],
   );
 
   async function copyId(bead: Bead) {
@@ -372,22 +376,24 @@ export function BoardScreen({
         />
       ) : null}
 
-      {selectedBeadId && detail ? (
+      {selectedBeadId && shownDetail ? (
         <BeadDetail
-          bead={detail.bead}
+          key={shownDetail.bead.id}
+          bead={shownDetail.bead}
           statuses={board?.statuses ?? []}
           theme={theme}
           compact={compact}
           busy={busy}
           closeWarnings={warnings}
-          description={detail.description}
-          design={detail.design}
-          notes={detail.notes}
-          comments={detail.comments}
+          description={shownDetail.description}
+          design={shownDetail.design}
+          notes={shownDetail.notes}
+          comments={shownDetail.comments}
           onClose={() => setSelectedBeadId(null)}
           onMove={moveBead}
           onSave={saveBead}
           onLabels={changeLabels}
+          onOpen={(id) => setSelectedBeadId(id)}
           onComment={(text) => {
             if (!selectedPath) return;
             run(actions.commentOnBead.mutateAsync({ id: selectedBeadId, text }), "Comment added");

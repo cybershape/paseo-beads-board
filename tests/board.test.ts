@@ -5,7 +5,7 @@ import path from "node:path";
 import { test } from "vitest";
 
 import { findBeadsRoot, hasBeadsDatabase } from "../server/bd";
-import { normalizeBoard, type RawBead } from "../server/beads";
+import { mergeShownBead, normalizeBoard, type RawBead } from "../server/beads";
 import { columnForStatus, statusNameForColumn } from "../shared/beads";
 
 function scratch(): string {
@@ -114,4 +114,28 @@ test("normalizeBoard marks a bead blocked by an open dependency", () => {
   assert.deepEqual(blocked?.blockedBy, ["blocker"]);
   assert.equal(related?.blocked, false);
   assert.equal(board.counts.blocked, 1);
+});
+
+test("mergeShownBead keeps blockers from the board when show is normalized alone", () => {
+  const board = normalizeBoard([
+    bead({ id: "blocker", status: "open" }),
+    bead({
+      id: "blocked-one",
+      dependencies: [{ issue_id: "blocked-one", depends_on_id: "blocker", type: "blocks" }],
+    }),
+  ]);
+  const base = board.beads.find((entry) => entry.id === "blocked-one");
+  const shown = normalizeBoard([
+    bead({
+      id: "blocked-one",
+      title: "from show",
+      dependencies: [{ issue_id: "blocked-one", depends_on_id: "blocker", type: "blocks" }],
+    }),
+  ]).beads[0];
+  assert.ok(base);
+  assert.deepEqual(shown?.blockedBy, []);
+  const merged = mergeShownBead(base, shown);
+  assert.equal(merged.title, "from show");
+  assert.deepEqual(merged.blockedBy, ["blocker"]);
+  assert.equal(merged.blocked, true);
 });

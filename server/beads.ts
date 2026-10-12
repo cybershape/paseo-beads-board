@@ -148,6 +148,26 @@ export function normalizeBoard(raw: RawBead[]): NormalizedBoard {
   return { beads, counts, truncated };
 }
 
+/**
+ * `bd show` is normalized on its own, so blocker targets are unknown and dropped.
+ * Keep the board's dependency graph when the show payload cannot see it.
+ */
+export function mergeShownBead(base: Bead | undefined, fromRow: Bead | undefined): Bead {
+  const row = fromRow ?? base;
+  const board = base ?? fromRow;
+  if (!row || !board) throw new Error("Bead was not found.");
+  return {
+    ...board,
+    ...row,
+    blocked: board.blocked || row.blocked,
+    blockedBy: row.blockedBy.length > 0 ? row.blockedBy : board.blockedBy,
+    blocks: row.blocks.length > 0 ? row.blocks : board.blocks,
+    childIds: row.childIds.length > 0 ? row.childIds : board.childIds,
+    closedChildCount: row.closedChildCount > 0 ? row.closedChildCount : board.closedChildCount,
+    parentId: row.parentId ?? board.parentId,
+  };
+}
+
 interface RawStatus {
   name?: string;
   category?: string;

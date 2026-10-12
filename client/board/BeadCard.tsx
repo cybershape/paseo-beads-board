@@ -1,5 +1,5 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View, StyleSheet } from "react-native";
 import type { PluginTheme } from "@getpaseo/plugin";
 import type { Bead } from "../../shared/beads";
@@ -22,21 +22,45 @@ export interface BeadCardProps {
 
 export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardProps) {
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
-  const [hovered, setHovered] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progress = bead.childIds.length > 0 ? bead.closedChildCount / bead.childIds.length : 0;
   const priorityColor = PRIORITY_COLORS[String(bead.priority)] ?? PRIORITY_COLORS["2"];
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
+    };
+  }, []);
+
+  function hoverIn() {
+    if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
+    if (!bead.blocked) return;
+    hoverTimer.current = setTimeout(() => {
+      hoverTimer.current = null;
+      setShowHint(true);
+    }, 200);
+  }
+
+  function hoverOut() {
+    if (hoverTimer.current !== null) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+    setShowHint(false);
+  }
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${bead.id}: ${bead.title}`}
       onPress={onPress}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
+      onHoverIn={hoverIn}
+      onHoverOut={hoverOut}
       style={({ pressed }) => [
         styles.card,
         pressed ? styles.cardPressed : null,
-        hovered && bead.blocked ? styles.cardRaised : null,
+        showHint ? styles.cardRaised : null,
       ]}
     >
       <View style={styles.header}>
@@ -103,7 +127,7 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
           </View>
         ) : null}
       </View>
-      {hovered && bead.blocked ? <BlockedHint bead={bead} styles={styles} /> : null}
+      {showHint ? <BlockedHint bead={bead} styles={styles} /> : null}
     </Pressable>
   );
 }
@@ -111,8 +135,8 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
 type Styles = ReturnType<typeof createStyles>;
 
 function BlockedHint({ bead, styles }: { bead: Bead; styles: Styles }) {
-  const lines = ["Blocked"];
-  if (bead.blockedBy.length > 0) lines.push(`Blocked by ${bead.blockedBy.join(", ")}`);
+  const lines =
+    bead.blockedBy.length > 0 ? [`Blocked by ${bead.blockedBy.join(", ")}`] : ["Blocked"];
   if (bead.blocks.length > 0) lines.push(`Blocks ${bead.blocks.join(", ")}`);
   return (
     <View style={styles.tooltip} pointerEvents="none">
