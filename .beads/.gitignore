@@ -1,7 +1,13 @@
-# Dolt database (managed by Dolt, not git)
+# Dolt database (managed by Dolt, not git). Kept so the old bd store can be restored.
 dolt/
 embeddeddolt/
 proxieddb/
+
+# beads_rust (br) runtime. issues.jsonl is the tracked export; the sqlite db is not.
+.br_history/
+.br_recovery/
+beads.base.jsonl
+beads.base.meta.json
 
 # Runtime files
 bd.sock

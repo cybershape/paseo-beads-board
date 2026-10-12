@@ -1,7 +1,6 @@
 {
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "embedded",
-  "dolt_database": "paseo_beads_board",
+  "database": "beads.db",
+  "jsonl_export": "issues.jsonl",
+  "backend": "sqlite",
   "project_id": "3b334bad-8504-4e64-9413-f221ace871a2"
 }

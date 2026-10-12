@@ -29,7 +29,7 @@ export function ProjectPicker({ projects, selectedPath, theme, compact, onSelect
       <Modal.Content scrollable={false} style={styles.body} contentContainerStyle={styles.content}>
         {projects.length === 0 ? (
           <Text style={styles.empty}>
-            No beads databases found. Add a project path in Settings → Plugins → Beads board, or run `bd init` in a
+            No beads databases found. Add a project path in Settings → Plugins → Beads board, or run `br init` in a
             Paseo project.
           </Text>
         ) : null}

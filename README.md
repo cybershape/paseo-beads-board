@@ -1,6 +1,6 @@
 # Beads board for Paseo
 
-A Paseo plugin that turns the [beads](https://github.com/steveyegian/beads) `bd` CLI into a
+A Paseo plugin that turns the [beads_rust](https://github.com/Dicklesworthstone/beads_rust) `br` CLI into a
 kanban board inside Paseo, inspired by [beads-web](https://github.com/weselow/beads-web).
 
 > **Pre-1.0.** Releases are `0.x`, following semver's pre-1.0 convention: features and fixes bump
@@ -8,7 +8,7 @@ kanban board inside Paseo, inspired by [beads-web](https://github.com/weselow/be
 > the board settle at `1.0.0`. Pin an exact version if you do not want to track the latest release.
 
 The board is rendered by the Paseo app (React Native, so desktop, browser, iOS, and Android all
-work) and every data operation runs the `bd` CLI in a subprocess on the daemon host. Install the
+work) and every data operation runs the `br` CLI in a subprocess on the daemon host. Install the
 plugin on each host you want a board for; Paseo shows one sidebar item with a host picker and the
 selected host serves its own projects.
 
@@ -40,8 +40,8 @@ selected host serves its own projects.
   status is `blocked`.
 - **Mutations** — create beads (with a project dropdown covering every discovered beads database),
   move them between columns, edit title/description/notes/priority/assignee, close and reopen, and
-  add comments. Each mutation shells out to `bd`.
-- **Bead detail** — full text (`bd show`), relations, and comments (`bd comments`).
+  add comments. Each mutation shells out to `br`.
+- **Bead detail** — full text (`br show`), relations, and comments (`br comments`).
 - **Workspace panel** — the same board as a workspace tab, preselected to the workspace's project.
 - **Composer attachment source** — attach a bead to a prompt from any composer.
 - **Host settings** — extra project paths, refresh interval, closed-column default.
@@ -49,11 +49,11 @@ selected host serves its own projects.
 ## Requirements
 
 - Paseo 0.8.0 or newer, on the daemon host and the connected app.
-- The [beads](https://github.com/steveyegian/beads) `bd` CLI on the **daemon host's `PATH`**, so the
-  plugin can shell out to it. Set `PASEO_BEADS_BD_BIN` in the daemon environment if the binary
-  lives somewhere unusual.
+- The [beads_rust](https://github.com/Dicklesworthstone/beads_rust) `br` CLI on the **daemon host's `PATH`**, so the
+  plugin can shell out to it. Set `PASEO_BEADS_BR_BIN` in the daemon environment if the binary
+  lives somewhere unusual. This plugin does not call `bd` (the Dolt-backed Go CLI).
 
-Plugins are trusted, unsandboxed code. This plugin's server code runs `bd` in the daemon user's
+Plugins are trusted, unsandboxed code. This plugin's server code runs `br` in the daemon user's
 account, so it can read and change the beads databases that user can reach. Review the source
 before installing it on a machine you care about.
 
@@ -115,8 +115,8 @@ index.server.ts       RPC handlers + host settings registration
 shared/beads.ts       Zod contracts, RPC definitions, status -> column mapping
 shared/settings.ts    host-scoped preferences document
 shared/attachments.ts composer attachment source
-server/bd.ts          `bd` process execution helpers
-server/beads.ts       raw bd JSON -> board normalization (parents, blockers, epic progress)
+server/br.ts          `br` process execution helpers
+server/beads.ts       raw br JSON -> board normalization (parents, blockers, epic progress)
 server/handlers.ts    project discovery and every RPC handler
 client/hooks.ts       TanStack Query hooks and mutations
 client/board/         board screen, columns, cards, detail/create/picker modals
@@ -127,18 +127,18 @@ tests/                unit tests for the status mapping and board normalization
 
 | RPC              | Runs                                    |
 | ---------------- | --------------------------------------- |
-| `beads.projects` | `bd status --json`, `bd count --json --status inreview`, `bd where --json` |
-| `beads.board`    | `bd list`, `bd statuses --json`, `bd where --json` |
-| `beads.show`     | `bd show <id> --json`, `bd comments <id> --json` |
-| `beads.create`   | `bd create --json`                      |
-| `beads.update`   | `bd update` / `bd close` / `bd reopen`, including `--add-label` / `--remove-label` |
-| `beads.comment`  | `bd comment`                            |
-| `beads.search`   | `bd list --json --brief --all`          |
+| `beads.projects` | `br status --json`, `br count --json --status in_review`, `br where --json` |
+| `beads.board`    | `br list --json --limit 0`, `br blocked --json`, `br where --json` |
+| `beads.show`     | `br show <id> --json`, `br comments <id> --json` |
+| `beads.create`   | `br create --json`                      |
+| `beads.update`   | `br update` / `br close` / `br reopen`, including `--add-label` / `--remove-label` |
+| `beads.comment`  | `br comments add`                       |
+| `beads.search`   | `br list --json --limit 0 --all`        |
 
 Discovery uses the daemon's Paseo API (`projects.list()`, `workspaces.list()`) to find candidate
 directories, and a directory appears on the board when `.beads` holds an initialized database
 (`config.yaml`, `metadata.json`, or `issues.db`) — directly, or within four parent levels. Each
-database is listed once however many Paseo worktrees point at it, and the counts come from `bd`'s
+database is listed once however many Paseo worktrees point at it, and the counts come from `br`'s
 own `status` summary rather than a full issue list.
 
 ## Development
@@ -164,17 +164,18 @@ change existing behaviour.
 
 - This plugin is pre-1.0 (`0.x`). A minor version bump may contain breaking changes, so pin a
   version if you are depending on today's behaviour.
-- The `bd` CLI must be installed on each daemon host you install this plugin on; a missing binary
-  surfaces as an error on the board and in `paseo plugin logs beads-board`.
+- The `br` CLI must be installed on each daemon host you install this plugin on; a missing binary
+  surfaces as an error on the board and in `paseo plugin logs beads-board`. `bd` databases (embedded
+  Dolt) are not read.
 - No drag and drop. React Native plugin code has no gesture-handler dependency, so cards move
   through the status buttons in the detail sheet.
 - No GitOps, PR, memory, or worktree panels: this plugin covers the beads board itself, unlike
   beads-web.
-- Beads are always read with `bd list --brief`; long text is fetched on demand with `bd show`, so
-  very large boards briefly load in two passes.
+- Long text is fetched on demand with `br show`. The board list does not include dependency edges,
+  so parents come from dotted ids (`br-abc.1`) and blockers come from `br blocked`.
 - Board data is capped at 5000 beads per load; larger databases show a truncated board.
-- Status names come from each database (`bd statuses --json`), so a database that has renamed
-  `in_progress` will move beads to whatever status currently maps to that column.
+- Move targets use `br`'s built-in statuses (`open`, `in_progress`, `in_review`, `closed`). `br` has
+  no per-database `statuses` command.
 
 ## Contributing
 

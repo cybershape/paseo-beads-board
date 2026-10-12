@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { findBeadsRoot, hasBeadsDatabase } from "../server/bd";
-import { mergeShownBead, normalizeBoard, type RawBead } from "../server/beads";
+import { enrichBrRows, issuesFromList, mergeShownBead, normalizeBoard, type RawBead } from "../server/beads";
+import { findBeadsRoot, hasBeadsDatabase } from "../server/br";
 import { columnForStatus, statusNameForColumn } from "../shared/beads";
 
 function scratch(): string {
@@ -24,7 +24,7 @@ test("hasBeadsDatabase needs a real database, not just a .beads directory", () =
   assert.equal(findBeadsRoot(path.join(root, "apps", "web", "src")), root, "nested dirs resolve to the database root");
 });
 
-test("columnForStatus maps the bd status vocabulary onto board columns", () => {
+test("columnForStatus maps the status vocabulary onto board columns", () => {
   assert.deepEqual(columnForStatus("open"), { column: "open", badge: null });
   assert.deepEqual(columnForStatus("in_progress"), { column: "in_progress", badge: null });
   assert.deepEqual(columnForStatus("inreview"), { column: "in_review", badge: null });
@@ -114,6 +114,46 @@ test("normalizeBoard marks a bead blocked by an open dependency", () => {
   assert.deepEqual(blocked?.blockedBy, ["blocker"]);
   assert.equal(related?.blocked, false);
   assert.equal(board.counts.blocked, 1);
+});
+
+test("normalizeBoard reads br show dependency_type edges", () => {
+  const board = normalizeBoard([
+    bead({ id: "blocker", status: "open" }),
+    bead({
+      id: "blocked-one",
+      dependencies: [{ id: "blocker", dependency_type: "blocks" }],
+    }),
+  ]);
+  const blocked = board.beads.find((entry) => entry.id === "blocked-one");
+  assert.equal(blocked?.blocked, true);
+  assert.deepEqual(blocked?.blockedBy, ["blocker"]);
+});
+
+test("issuesFromList unwraps br's list envelope and a bare array", () => {
+  assert.deepEqual(issuesFromList({ issues: [{ id: "a" }], total: 1 }).map((row) => row.id), ["a"]);
+  assert.deepEqual(issuesFromList([{ id: "b" }]).map((row) => row.id), ["b"]);
+  assert.deepEqual(issuesFromList(null), []);
+});
+
+test("enrichBrRows links dotted children and ignores epic rollup blockers", () => {
+  const rows = enrichBrRows(
+    [
+      bead({ id: "demo-1", issue_type: "epic" }),
+      bead({ id: "demo-1.1" }),
+      bead({ id: "demo-2" }),
+    ],
+    [
+      { id: "demo-1", blocked_by: ["demo-1.1"] },
+      { id: "demo-1.1", blocked_by: ["demo-2"] },
+    ],
+  );
+  const board = normalizeBoard(rows);
+  const epic = board.beads.find((entry) => entry.id === "demo-1");
+  const child = board.beads.find((entry) => entry.id === "demo-1.1");
+  assert.equal(epic?.blocked, false, "open children do not block the epic on this board");
+  assert.deepEqual(epic?.childIds, ["demo-1.1"]);
+  assert.equal(child?.parentId, "demo-1");
+  assert.deepEqual(child?.blockedBy, ["demo-2"]);
 });
 
 test("mergeShownBead keeps blockers from the board when show is normalized alone", () => {

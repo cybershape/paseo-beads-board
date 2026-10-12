@@ -1,16 +1,15 @@
 import path from "node:path";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import { beadDetailSchema, type Bead, type ProjectSummary } from "../shared/beads";
-import { BdError, findBeadsRoot, hasBeadsDatabase, projectName, runBdJson, runBdText } from "./bd";
-import { loadBoardPayload, mergeShownBead, normalizeBoard, type RawBead } from "./beads";
+import { issuesFromList, loadBoardPayload, mergeShownBead, normalizeBoard, type RawBead } from "./beads";
+import { BrError, findBeadsRoot, hasBeadsDatabase, projectName, runBrJson, runBrText } from "./br";
 
 const MAX_PROJECTS = 40;
 /**
- * Beads runs on an embedded database that serialises writers per data directory, so
- * concurrent `bd` processes in one project crawl. Two per project is cheap; a wide
- * fan-out across projects is not.
+ * br uses one SQLite writer per database. A wide fan-out across projects is fine;
+ * hammering one database from many processes is not.
  */
-const MAX_CONCURRENT_BD = 4;
+const MAX_CONCURRENT_BR = 4;
 
 interface Candidate {
   dir: string;
@@ -76,10 +75,9 @@ function count(value: unknown): number {
 }
 
 /**
- * Ask `bd` for its own overview instead of pulling the whole issue list and counting
- * it here. `status` covers the totals, `where` the issue prefix, and `count` the one
- * column beads has no summary bucket for. Three cheap reads beat one heavy one, and
- * they keep the RPC well inside the daemon's 30s budget.
+ * Ask `br` for its own overview instead of pulling the whole issue list and counting
+ * it here. `status` covers the totals, `where` the issue prefix, and `count` the review
+ * column br's summary does not split out.
  */
 async function summarize(candidate: Candidate): Promise<ProjectSummary> {
   const base: ProjectSummary = {
@@ -95,13 +93,13 @@ async function summarize(candidate: Candidate): Promise<ProjectSummary> {
     error: null,
   };
   try {
-    const status = await runBdJson<StatusSummary>(candidate.dir, ["status", "--json", "--no-activity"], 20_000);
-    const inReview = await runBdJson<{ count?: number } | null>(
+    const status = await runBrJson<StatusSummary>(candidate.dir, ["status", "--json", "--no-activity"], 20_000);
+    const inReview = await runBrJson<{ count?: number } | null>(
       candidate.dir,
-      ["count", "--json", "--status", "inreview"],
+      ["count", "--json", "--status", "inreview", "--status", "in_review", "--status", "review"],
       15_000,
     ).catch(() => null);
-    const where = await runBdJson<{ prefix?: string } | null>(candidate.dir, ["where", "--json"], 15_000);
+    const where = await runBrJson<{ prefix?: string } | null>(candidate.dir, ["where", "--json"], 15_000);
     const summary = status?.summary ?? {};
     const prefix = typeof where?.prefix === "string" && where.prefix.length > 0 ? where.prefix : null;
     return {
@@ -119,7 +117,7 @@ async function summarize(candidate: Candidate): Promise<ProjectSummary> {
   }
 }
 
-/** Run `bd` for each project with a bounded fan-out, preserving input order. */
+/** Run `br` for each project with a bounded fan-out, preserving input order. */
 async function mapWithConcurrency<T, R>(items: T[], limit: number, run: (item: T) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
@@ -136,7 +134,7 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, run: (item: T
 /**
  * Collapse candidates onto the beads database that actually holds them. Every Paseo
  * worktree of a project points at the same database, and summarising each one
- * separately used to fan a dozen `bd` processes at a single embedded database.
+ * separately used to fan a dozen CLI processes at a single database.
  */
 function resolveDatabaseRoots(candidates: Candidate[]): Candidate[] {
   const byRoot = new Map<string, Candidate>();
@@ -163,7 +161,7 @@ export async function handleListProjects(
 ) {
   const candidates = await collectCandidates(extraPaths, context);
   const withDatabase = resolveDatabaseRoots(candidates);
-  const projects = await mapWithConcurrency(withDatabase, MAX_CONCURRENT_BD, summarize);
+  const projects = await mapWithConcurrency(withDatabase, MAX_CONCURRENT_BR, summarize);
   projects.sort((a, b) => {
     if (a.error && !b.error) return 1;
     if (b.error && !a.error) return -1;
@@ -175,7 +173,7 @@ export async function handleListProjects(
 export async function handleLoadBoard({ path: dir, includeClosed }: { path: string; includeClosed: boolean }) {
   const root = hasBeadsDatabase(dir) ? dir : findBeadsRoot(dir);
   if (!root) {
-    throw new Error(`No beads database found at ${dir}. Run \`bd init\` there, or add the project path in settings.`);
+    throw new Error(`No beads database found at ${dir}. Run \`br init\` there, or add the project path in settings.`);
   }
   return loadBoardPayload(root, includeClosed);
 }
@@ -184,22 +182,20 @@ export async function handleShowBead({ path: dir, id }: { path: string; id: stri
   const root = hasBeadsDatabase(dir) ? dir : findBeadsRoot(dir);
   if (!root) throw new Error(`No beads database found at ${dir}.`);
 
-  // Sequential: bd serialises access to one database, so parallel reads here cost
-  // seconds each. The detail pane is not on a hot path.
-  const rows = await runBdJson<RawBead[]>(root, ["show", id, "--json"]);
-  const comments = await runBdJson<{ id?: string; author?: string; text?: string; created_at?: string }[]>(root, [
-    "comments",
-    id,
-    "--json",
-  ]).catch(() => []);
-  const board = await runBdJson<RawBead[]>(root, ["list", "--json", "--brief", "--all", "-n", "0"]).catch(
-    (): RawBead[] => [],
+  // Sequential: one SQLite database, and the detail pane is not on a hot path.
+  const rows = await runBrJson<RawBead[]>(root, ["show", id, "--json"]);
+  const comments = await runBrJson<{ id?: string | number; author?: string; text?: string; created_at?: string }[]>(
+    root,
+    ["comments", id, "--json"],
+  ).catch(() => []);
+  const board = await runBrJson<unknown>(root, ["list", "--json", "--limit", "0", "--all"]).catch(
+    () => null,
   );
 
   const row = (rows ?? [])[0];
   if (!row) throw new Error(`Bead ${id} was not found in ${root}.`);
 
-  const normalized = normalizeBoard(board);
+  const normalized = normalizeBoard(issuesFromList(board));
   const base: Bead | undefined = normalized.beads.find((bead) => bead.id === id);
   const fromRow = normalizeBoard([row]).beads[0];
   const bead: Bead = mergeShownBead(base, fromRow);
@@ -210,7 +206,7 @@ export async function handleShowBead({ path: dir, id }: { path: string; id: stri
     design: row.design ?? null,
     notes: row.notes ?? null,
     comments: (comments ?? []).map((comment) => ({
-      id: comment.id ?? `${comment.created_at ?? ""}`,
+      id: comment.id == null ? `${comment.created_at ?? ""}` : String(comment.id),
       author: comment.author ?? "unknown",
       text: comment.text ?? "",
       createdAt: comment.created_at ?? null,
@@ -246,9 +242,9 @@ export async function handleCreateBead({
   if (labels.length > 0) args.push("-l", labels.join(","));
   if (parent.trim()) args.push("--parent", parent.trim());
 
-  const created = await runBdJson<{ id?: string } | RawBead[] | null>(root, args, 30_000);
+  const created = await runBrJson<{ id?: string } | RawBead[] | null>(root, args, 30_000);
   const id = Array.isArray(created) ? created[0]?.id : created?.id;
-  if (!id) throw new Error("bd create did not return an issue ID.");
+  if (!id) throw new Error("br create did not return an issue ID.");
   return { id };
 }
 
@@ -287,14 +283,14 @@ export async function handleUpdateBead({
     if (reason?.trim()) closeArgs.push("--reason", reason.trim());
     if (force) closeArgs.push("--force");
     try {
-      await runBdText(root, closeArgs, 30_000);
+      await runBrText(root, closeArgs, 30_000);
     } catch (error) {
       throw closeRefusal(id, error);
     }
     return { ok: true, message: `${id} closed` };
   }
   if (status && statusIsOpenLike(status)) {
-    await runBdText(root, ["reopen", id], 30_000);
+    await runBrText(root, ["reopen", id], 30_000);
     return { ok: true, message: `${id} reopened` };
   }
 
@@ -303,12 +299,12 @@ export async function handleUpdateBead({
   if (description !== undefined) args.push("-d", description);
   if (notes !== undefined) args.push("--notes", notes);
   if (priority !== undefined) args.push("-p", String(priority));
-  if (assignee !== undefined) args.push("-a", assignee);
+  if (assignee !== undefined) args.push("--assignee", assignee);
   if (status !== undefined) args.push("-s", status);
   for (const label of cleanLabels(addLabels)) args.push("--add-label", label);
   for (const label of cleanLabels(removeLabels)) args.push("--remove-label", label);
 
-  const result = await runBdText(root, args, 30_000);
+  const result = await runBrText(root, args, 30_000);
   const message = result
     .split("\n")
     .map((line) => line.trim())
@@ -317,9 +313,9 @@ export async function handleUpdateBead({
   return { ok: true, message: message && message.length < 200 ? message : `${id} updated` };
 }
 
-/** Turn a `bd close` refusal into an actionable message instead of raw CLI output. */
+/** Turn a `br close` refusal into an actionable message instead of raw CLI output. */
 function closeRefusal(id: string, error: unknown): Error {
-  const detail = error instanceof BdError ? `${error.message}` : String(error);
+  const detail = error instanceof BrError ? `${error.message}` : String(error);
   if (/assignee is|reclaim|claimed/i.test(detail)) {
     return new Error(
       `${id} is claimed by another assignee, so beads refused to close it. Reassign it, or use Force close.`,
@@ -361,7 +357,7 @@ export async function handleComment({ path: dir, id, text }: { path: string; id:
   if (!root) throw new Error(`No beads database found at ${dir}.`);
   const trimmed = text.trim();
   if (!trimmed) throw new Error("Comment text is empty.");
-  await runBdText(root, ["comment", id, trimmed], 30_000);
+  await runBrText(root, ["comments", "add", id, trimmed], 30_000);
   return { ok: true };
 }
 
@@ -376,17 +372,12 @@ export async function handleSearchBeads(
   const term = query.trim();
   if (!term || roots.length === 0) return { items: [] };
 
-  const perRoot = await mapWithConcurrency(roots.slice(0, 12), MAX_CONCURRENT_BD, async (root) => {
-    const rows = await runBdJson<RawBead[]>(root, ["list", "--json", "--brief", "-n", "0", "--all"]).catch(
-      (): RawBead[] => [],
-    );
-      const normalized = normalizeBoard(rows ?? []);
-      const needle = term.toLowerCase();
-      return normalized.beads
-        .filter(
-          (bead) =>
-            bead.id.toLowerCase().includes(needle) || bead.title.toLowerCase().includes(needle),
-        )
+  const perRoot = await mapWithConcurrency(roots.slice(0, 12), MAX_CONCURRENT_BR, async (root) => {
+    const rows = await runBrJson<unknown>(root, ["list", "--json", "--limit", "0", "--all"]).catch(() => null);
+    const normalized = normalizeBoard(issuesFromList(rows));
+    const needle = term.toLowerCase();
+    return normalized.beads
+      .filter((bead) => bead.id.toLowerCase().includes(needle) || bead.title.toLowerCase().includes(needle))
       .slice(0, 20)
       .map((bead) => ({ bead, root }));
   });
@@ -408,8 +399,8 @@ export async function handleSearchBeads(
         bead.assignee ? `Assignee: ${bead.assignee}` : null,
         bead.labels.length > 0 ? `Labels: ${bead.labels.join(", ")}` : null,
         "",
-        `Managed with the beads CLI (bd). Change status with: bd update ${bead.id} -s <status>`,
-        `Close it with: bd close ${bead.id} --reason "<reason>"`,
+        `Managed with beads_rust (br). Change status with: br update ${bead.id} --status <status>`,
+        `Close it with: br close ${bead.id} --reason "<reason>"`,
       ]
         .filter((line) => line !== null)
         .join("\n"),

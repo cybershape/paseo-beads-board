@@ -32,7 +32,7 @@ export default function contribute(client: PluginClientContext) {
     id: "open-beads-board",
     title: "Open beads board",
     icon: "Kanban",
-    keywords: ["bd", "beads", "issues", "kanban"],
+    keywords: ["br", "bd", "beads", "issues", "kanban"],
     context: "global",
     onSelect({ openSurface }) {
       openSurface("beads-board");
@@ -43,7 +43,7 @@ export default function contribute(client: PluginClientContext) {
     id: "open-beads-panel",
     title: "Open beads for this workspace",
     icon: "Kanban",
-    keywords: ["bd", "beads", "issues"],
+    keywords: ["br", "bd", "beads", "issues"],
     context: "workspace",
     onSelect({ openPanel }) {
       openPanel("beads-board-panel");

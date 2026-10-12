@@ -1,10 +1,13 @@
 import { columnForStatus, type Bead, type Column, type StatusInfo } from "../shared/beads";
-import { projectName, runBdJson } from "./bd";
+import { projectName, runBrJson } from "./br";
 
 interface RawDependency {
   issue_id?: string;
   depends_on_id?: string;
+  /** `br show` names the dependency target `id` and the edge `dependency_type`. */
+  id?: string;
   type?: string;
+  dependency_type?: string;
 }
 
 export interface RawBead {
@@ -58,7 +61,7 @@ export interface NormalizedBoard {
   truncated: boolean;
 }
 
-/** Turn raw `bd list` output into board beads, resolving parents, blockers, and epic progress. */
+/** Turn raw issue rows into board beads, resolving parents, blockers, and epic progress. */
 export function normalizeBoard(raw: RawBead[]): NormalizedBoard {
   const rows = Array.isArray(raw) ? raw.filter((row) => row && typeof row.id === "string") : [];
   const truncated = rows.length > MAX_BEADS;
@@ -73,10 +76,10 @@ export function normalizeBoard(raw: RawBead[]): NormalizedBoard {
   for (const row of limited) {
     const deps = Array.isArray(row.dependencies) ? row.dependencies : [];
     for (const dep of deps) {
-      const type = (dep?.type ?? "").toLowerCase();
-      const target = asString(dep?.depends_on_id);
+      const type = (dep?.type ?? dep?.dependency_type ?? "").toLowerCase();
+      const target = asString(dep?.depends_on_id) ?? asString(dep?.id);
       const source = asString(dep?.issue_id) ?? row.id;
-      if (!target) continue;
+      if (!target || target === source) continue;
       if (type === "parent-child") {
         parentOf.set(source, target);
         const existing = childrenOf.get(target) ?? [];
@@ -148,8 +151,54 @@ export function normalizeBoard(raw: RawBead[]): NormalizedBoard {
   return { beads, counts, truncated };
 }
 
+/** `br list --json` is `{ issues, total, ... }`; older `bd list --json` was a bare array. */
+export function issuesFromList(payload: unknown): RawBead[] {
+  if (Array.isArray(payload)) return payload as RawBead[];
+  if (payload && typeof payload === "object" && Array.isArray((payload as { issues?: unknown }).issues)) {
+    return (payload as { issues: RawBead[] }).issues;
+  }
+  return [];
+}
+
+export interface BlockedRow {
+  id?: string;
+  blocked_by?: string[];
+}
+
 /**
- * `bd show` is normalized on its own, so blocker targets are unknown and dropped.
+ * `br list` omits dependency edges. Children are dotted ids (`parent.1`), and
+ * `br blocked` reports both real blockers and open children of an epic. Drop the
+ * latter: this board does not treat parent-child links as blockers.
+ */
+export function enrichBrRows(rows: RawBead[], blocked: BlockedRow[]): RawBead[] {
+  const ids = new Set(rows.map((row) => row.id));
+  const blockedBy = new Map<string, string[]>();
+  for (const row of blocked) {
+    if (typeof row?.id === "string") blockedBy.set(row.id, Array.isArray(row.blocked_by) ? row.blocked_by : []);
+  }
+  return rows.map((row) => {
+    const deps: RawDependency[] = Array.isArray(row.dependencies) ? [...row.dependencies] : [];
+    const dot = row.id.lastIndexOf(".");
+    const parent = dot > 0 ? row.id.slice(0, dot) : null;
+    const hasEdge = (target: string, type?: string) =>
+      deps.some((dep) => (dep.depends_on_id ?? dep.id) === target && (type == null || (dep.type ?? dep.dependency_type) === type));
+    if (parent && ids.has(parent) && !hasEdge(parent)) {
+      deps.push({ issue_id: row.id, depends_on_id: parent, type: "parent-child" });
+    }
+    for (const target of blockedBy.get(row.id) ?? []) {
+      if (!target || target.startsWith(`${row.id}.`) || row.id.startsWith(`${target}.`)) continue;
+      if (!hasEdge(target)) deps.push({ issue_id: row.id, depends_on_id: target, type: "blocks" });
+    }
+    return {
+      ...row,
+      parent: asString(row.parent) ?? (parent && ids.has(parent) ? parent : null),
+      dependencies: deps,
+    };
+  });
+}
+
+/**
+ * `br show` is normalized on its own, so blocker targets are unknown and dropped.
  * Keep the board's dependency graph when the show payload cannot see it.
  */
 export function mergeShownBead(base: Bead | undefined, fromRow: Bead | undefined): Bead {
@@ -168,31 +217,25 @@ export function mergeShownBead(base: Bead | undefined, fromRow: Bead | undefined
   };
 }
 
-interface RawStatus {
-  name?: string;
-  category?: string;
+/** Statuses `br update --status` accepts. br has no `statuses` subcommand. */
+const BR_STATUSES: StatusInfo[] = [
+  { name: "open", category: "active" },
+  { name: "in_progress", category: "active" },
+  { name: "blocked", category: "active" },
+  { name: "deferred", category: "active" },
+  { name: "pinned", category: "active" },
+  { name: "hooked", category: "active" },
+  { name: "in_review", category: "active" },
+  { name: "inreview", category: "active" },
+  { name: "closed", category: "closed" },
+];
+
+export function loadStatuses(): StatusInfo[] {
+  return BR_STATUSES;
 }
 
-/** Read the statuses this database knows about, so the board can resolve move targets. */
-export async function loadStatuses(dir: string): Promise<StatusInfo[]> {
-  const raw = await runBdJson<{ built_in_statuses?: RawStatus[]; statuses?: RawStatus[] } | null>(
-    dir,
-    ["statuses", "--json"],
-    15_000,
-  );
-  const rows = [...(raw?.built_in_statuses ?? []), ...(raw?.statuses ?? [])];
-  const seen = new Set<string>();
-  const statuses: StatusInfo[] = [];
-  for (const row of rows) {
-    const name = asString(row?.name);
-    if (!name || seen.has(name)) continue;
-    seen.add(name);
-    statuses.push({ name, category: asString(row?.category) ?? "active" });
-  }
-  return statuses;
-}
 export async function loadPrefix(dir: string): Promise<string | null> {
-  const raw = await runBdJson<{ prefix?: string } | null>(dir, ["where", "--json"], 15_000);
+  const raw = await runBrJson<{ prefix?: string } | null>(dir, ["where", "--json"], 15_000);
   return asString(raw?.prefix);
 }
 
@@ -207,14 +250,13 @@ export interface BoardPayload {
 }
 
 export async function loadBoardPayload(dir: string, includeClosed: boolean): Promise<BoardPayload> {
-  const args = ["list", "--json", "--brief", "-n", "0"];
+  const args = ["list", "--json", "--limit", "0"];
   if (includeClosed) args.push("--all");
-  // Sequential on purpose: bd serialises access to its embedded database, so three
-  // parallel reads in one project cost several times what they do in a row. The board
-  // polls, so this runs constantly.
-  const raw = await runBdJson<RawBead[]>(dir, args);
-  const statuses = await loadStatuses(dir);
+  // Sequential: br's SQLite store allows one writer, and the board polls.
+  const listed = await runBrJson<unknown>(dir, args);
+  const blocked = await runBrJson<{ issues?: BlockedRow[] } | null>(dir, ["blocked", "--json", "--limit", "0"]);
   const prefix = await loadPrefix(dir);
-  const { beads, counts, truncated } = normalizeBoard(raw ?? []);
-  return { path: dir, name: projectName(dir), prefix, statuses, counts, beads, truncated };
+  const rows = enrichBrRows(issuesFromList(listed), blocked?.issues ?? []);
+  const { beads, counts, truncated } = normalizeBoard(rows);
+  return { path: dir, name: projectName(dir), prefix, statuses: loadStatuses(), counts, beads, truncated };
 }

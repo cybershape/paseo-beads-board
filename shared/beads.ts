@@ -14,7 +14,7 @@ export const COLUMN_TITLES: Record<Column, string> = {
   closed: "Closed",
 };
 
-/** Raw `bd` status -> board column, matching beads-web's STATUS_MAP. */
+/** Raw issue status -> board column, matching beads-web's STATUS_MAP. */
 const STATUS_MAP: Record<string, { column: Column; badge?: string } | null> = {
   open: { column: "open" },
   pending: { column: "open" },
@@ -178,13 +178,13 @@ export const updateBead = defineRpc({
     priority: z.number().int().min(0).max(4).optional(),
     assignee: z.string().optional(),
     status: z.string().optional(),
-    /** Recorded with `bd close --reason` when the move closes the bead. */
+    /** Recorded with `br close --reason` when the move closes the bead. */
     reason: z.string().optional(),
     /** Close past beads' claim, gate, and open-children guards. */
     force: z.boolean().optional(),
-    /** Added with `bd update --add-label`. */
+    /** Added with `br update --add-label`. */
     addLabels: z.array(z.string()).optional(),
-    /** Removed with `bd update --remove-label`. */
+    /** Removed with `br update --remove-label`. */
     removeLabels: z.array(z.string()).optional(),
   }),
   output: z.object({ ok: z.boolean(), message: z.string().default("") }),

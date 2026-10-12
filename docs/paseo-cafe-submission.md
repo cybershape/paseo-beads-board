@@ -13,7 +13,7 @@ only hand-written file is the tiny registry entry (a copy is in
 | GitHub repository| `jmkelly/paseo-beads-board`                       |
 | Plugin subpath   | *(blank — the plugin is the repository root)*     |
 | npm package      | `paseo-beads-board`                              |
-| Release channel  | stable semver, pre-1.0 — `0.1.1` (`0.x`)        |
+| Release channel  | stable semver, pre-1.0 — `0.2.0` (`0.x`)        |
 | Categories       | `productivity`                                   |
 | Platforms        | *(blank — not platform-restricted)*              |
 | Caveats          | the six lines in `registry-entry.json`           |
@@ -74,7 +74,7 @@ pnpm view paseo-beads-board dist.tarball
 
 Open the prefilled issue (same field values as the table above, caveats pre-filled):
 
-<https://github.com/paseo-cafe/paseo-cafe/issues/new?template=plugin-submission.yml&title=Add+plugin%3A+beads-board&registry-id=beads-board&repo=jmkelly%2Fpaseo-beads-board&package=paseo-beads-board&categories=productivity&caveats=Requires+the+beads+%60bd%60+CLI+on+the+daemon+host%3B+set+PASEO_BEADS_BD_BIN+if+it+is+not+on+PATH.%0AServer+code+runs+%60bd%60+as+the+daemon+user+and+can+modify+any+beads+database+that+user+can+reach.%0APre-1.0+release%3A+versions+are+0.x%2C+so+a+minor+bump+may+contain+breaking+changes.%0ANo+drag+and+drop%3A+move+beads+with+the+status+buttons+in+the+bead+detail+sheet.%0ABoard+only%3B+beads-web%27s+GitOps%2C+PR%2C+memory%2C+and+worktree+panels+are+not+included.%0ABoards+load+at+most+5000+beads+per+project%2C+and+long+bead+text+is+fetched+on+demand.>
+<https://github.com/paseo-cafe/paseo-cafe/issues/new?template=plugin-submission.yml&title=Add+plugin%3A+beads-board&registry-id=beads-board&repo=jmkelly%2Fpaseo-beads-board&package=paseo-beads-board&categories=productivity&caveats=Requires+the+beads_rust+%60br%60+CLI+on+the+daemon+host%3B+set+PASEO_BEADS_BR_BIN+if+it+is+not+on+PATH.%0AServer+code+runs+%60br%60+as+the+daemon+user+and+can+modify+any+beads+database+that+user+can+reach.+bd%2FDolt+databases+are+not+read.%0APre-1.0+release%3A+versions+are+0.x%2C+so+a+minor+bump+may+contain+breaking+changes.%0ANo+drag+and+drop%3A+move+beads+with+the+status+buttons+in+the+bead+detail+sheet.%0ABoard+only%3B+beads-web%27s+GitOps%2C+PR%2C+memory%2C+and+worktree+panels+are+not+included.%0ABoards+load+at+most+5000+beads+per+project%2C+and+long+bead+text+is+fetched+on+demand.>
 
 Or use the form at <https://paseo.cafe/submit> and paste the same values. Tick both confirmation
 boxes. The bot then opens the registry pull request, checks the repo/manifest id and the security

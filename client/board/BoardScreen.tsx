@@ -449,7 +449,7 @@ function errorText(error: unknown): string {
   return describeError(error);
 }
 
-/** Drop the daemon's RPC envelope so toasts show the bd message, not transport noise. */
+/** Drop the daemon's RPC envelope so toasts show the br message, not transport noise. */
 function describeError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
   return raw

@@ -5,6 +5,19 @@ identity: the paseo.cafe catalog uses `package.json.version` to show and track u
 and publish to npm for every user-visible change. Releases are `0.x` (semver pre-1.0): patch
 versions are safe upgrades, minor versions may still contain breaking changes.
 
+## 0.2.0
+
+The board now talks to [beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`br`) instead of
+the Go `bd` CLI. `bd`'s embedded Dolt database was too slow for the polling board.
+
+- Every RPC shells out to `br`. The binary override is `PASEO_BEADS_BR_BIN` (default `br`).
+- `br list` returns `{ issues: [...] }`, not a bare array. Parents are recovered from dotted ids
+  (`br-abc.1`), and blockers come from `br blocked`. Open children no longer mark an epic blocked.
+- Comments are `br comments` / `br comments add`. Assignee updates use `--assignee` (`br update` has
+  no `-a`). `br` has no `statuses` command; move targets are the built-in status names, with
+  `in_review` preferred.
+- A project database is also recognized when `.beads/beads.db` is present.
+
 ## 0.1.1
 
 Fix for beads-enabled projects not showing up in the project picker.

@@ -114,7 +114,7 @@ export function BeadsSettings({ theme }: PluginSurfaceProps) {
         <SettingsCard>
           <SettingsSelect
             label="Auto refresh"
-            hint="How often the board reloads from the bd CLI"
+            hint="How often the board reloads from the br CLI"
             value={String(values.pollIntervalSeconds)}
             options={POLL_OPTIONS}
             onValueChange={(value) => update({ pollIntervalSeconds: Number.parseInt(value, 10) || 0 })}

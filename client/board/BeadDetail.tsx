@@ -378,7 +378,7 @@ export function BeadDetail(props: BeadDetailProps) {
       >
         <Modal.Content style={styles.confirmBody}>
           <Text style={styles.text}>
-            {bead.id} has constraints that normally block a close. Closing it runs `bd close --force`.
+            {bead.id} has constraints that normally block a close. Closing it runs `br close --force`.
           </Text>
           <ScrollView style={styles.confirmList} contentContainerStyle={styles.confirmListContent}>
             {props.closeWarnings.map((warning) => (

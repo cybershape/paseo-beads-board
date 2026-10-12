@@ -5,19 +5,19 @@ import path from "node:path";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
-export class BdError extends Error {
+export class BrError extends Error {
   readonly stderr: string;
 
   constructor(message: string, stderr: string) {
     super(message);
-    this.name = "BdError";
+    this.name = "BrError";
     this.stderr = stderr;
   }
 }
 
-function bdBinary(): string {
-  const configured = process.env.PASEO_BEADS_BD_BIN?.trim();
-  return configured && configured.length > 0 ? configured : "bd";
+function brBinary(): string {
+  const configured = process.env.PASEO_BEADS_BR_BIN?.trim();
+  return configured && configured.length > 0 ? configured : "br";
 }
 
 interface RunResult {
@@ -26,26 +26,26 @@ interface RunResult {
   code: number;
 }
 
-/** Run the `bd` CLI in `cwd` without a shell. */
-export function runBd(cwd: string, args: string[], timeoutMs = DEFAULT_TIMEOUT_MS): Promise<RunResult> {
+/** Run the `br` CLI in `cwd` without a shell. */
+export function runBr(cwd: string, args: string[], timeoutMs = DEFAULT_TIMEOUT_MS): Promise<RunResult> {
   return new Promise((resolve, reject) => {
     execFile(
-      bdBinary(),
+      brBinary(),
       args,
       {
         cwd,
         timeout: timeoutMs,
         maxBuffer: MAX_BUFFER_BYTES,
         windowsHide: true,
-        env: { ...process.env, NO_COLOR: "1", BD_LAST_TOUCHED_FALLBACK: "0" },
+        env: { ...process.env, NO_COLOR: "1" },
       },
       (error, stdout, stderr) => {
         if (error && typeof (error as { code?: unknown }).code !== "number") {
           const failure = error as NodeJS.ErrnoException;
           reject(
-            new BdError(
+            new BrError(
               failure.code === "ENOENT"
-                ? `Could not run \`${bdBinary()}\`. Install the beads CLI or set PASEO_BEADS_BD_BIN.`
+                ? `Could not run \`${brBinary()}\`. Install beads_rust (\`br\`) or set PASEO_BEADS_BR_BIN.`
                 : (failure.message ?? String(error)),
               String(stderr ?? ""),
             ),
@@ -62,28 +62,28 @@ export function runBd(cwd: string, args: string[], timeoutMs = DEFAULT_TIMEOUT_M
   });
 }
 
-/** Run `bd` and parse its JSON stdout, throwing a readable error on failure. */
-export async function runBdJson<T>(cwd: string, args: string[], timeoutMs?: number): Promise<T> {
-  const result = await runBd(cwd, args, timeoutMs);
+/** Run `br` and parse its JSON stdout, throwing a readable error on failure. */
+export async function runBrJson<T>(cwd: string, args: string[], timeoutMs?: number): Promise<T> {
+  const result = await runBr(cwd, args, timeoutMs);
   if (result.code !== 0) {
     const detail = (result.stderr || result.stdout).trim().split("\n").slice(0, 4).join(" ");
-    throw new BdError(`bd ${args.join(" ")} failed: ${detail || `exit ${result.code}`}`, result.stderr);
+    throw new BrError(`br ${args.join(" ")} failed: ${detail || `exit ${result.code}`}`, result.stderr);
   }
   const text = result.stdout.trim();
   if (!text) return null as T;
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new BdError(`bd ${args.join(" ")} returned output that is not JSON`, result.stdout);
+    throw new BrError(`br ${args.join(" ")} returned output that is not JSON`, result.stdout);
   }
 }
 
-/** Run `bd` and return trimmed stdout, for commands that print IDs or plain text. */
-export async function runBdText(cwd: string, args: string[], timeoutMs?: number): Promise<string> {
-  const result = await runBd(cwd, args, timeoutMs);
+/** Run `br` and return trimmed stdout, for commands that print IDs or plain text. */
+export async function runBrText(cwd: string, args: string[], timeoutMs?: number): Promise<string> {
+  const result = await runBr(cwd, args, timeoutMs);
   if (result.code !== 0) {
     const detail = (result.stderr || result.stdout).trim().split("\n").slice(0, 4).join(" ");
-    throw new BdError(`bd ${args.join(" ")} failed: ${detail || `exit ${result.code}`}`, result.stderr);
+    throw new BrError(`br ${args.join(" ")} failed: ${detail || `exit ${result.code}`}`, result.stderr);
   }
   return result.stdout.trim();
 }
@@ -91,9 +91,10 @@ export async function runBdText(cwd: string, args: string[], timeoutMs?: number)
 /**
  * Files beads writes into `.beads` once a database is initialized there. Beads also
  * keeps a machine-level `~/.beads` for event data, so a bare directory is not proof
- * of a project database.
+ * of a project database. `beads.db` is the beads_rust (br) store; `issues.db` is the
+ * older sqlite name.
  */
-const DATABASE_MARKERS = ["config.yaml", "metadata.json", "issues.db"];
+const DATABASE_MARKERS = ["config.yaml", "metadata.json", "issues.db", "beads.db"];
 
 export function hasBeadsDatabase(dir: string): boolean {
   try {
