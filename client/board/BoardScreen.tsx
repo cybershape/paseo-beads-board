@@ -161,6 +161,20 @@ export function BoardScreen({
     );
   }
 
+  function changeLabels(change: { add: string[]; remove: string[] }) {
+    if (!selectedPath || !selectedBeadId) return;
+    if (change.add.length === 0 && change.remove.length === 0) return;
+    run(
+      actions.updateBead.mutateAsync({
+        path: selectedPath,
+        id: selectedBeadId,
+        addLabels: change.add,
+        removeLabels: change.remove,
+      }),
+      `${selectedBeadId} labels updated`,
+    );
+  }
+
   function createBead(input: CreateBeadInput) {
     if (!input.path) return;
     const projectName = projects.find((project) => project.path === input.path)?.name;
@@ -373,6 +387,7 @@ export function BoardScreen({
           onClose={() => setSelectedBeadId(null)}
           onMove={moveBead}
           onSave={saveBead}
+          onLabels={changeLabels}
           onComment={(text) => {
             if (!selectedPath) return;
             run(actions.commentOnBead.mutateAsync({ id: selectedBeadId, text }), "Comment added");

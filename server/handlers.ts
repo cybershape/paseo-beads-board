@@ -263,6 +263,8 @@ export async function handleUpdateBead({
   status,
   reason,
   force,
+  addLabels,
+  removeLabels,
 }: {
   path: string;
   id: string;
@@ -274,6 +276,8 @@ export async function handleUpdateBead({
   status?: string;
   reason?: string;
   force?: boolean;
+  addLabels?: string[];
+  removeLabels?: string[];
 }) {
   const root = hasBeadsDatabase(dir) ? dir : findBeadsRoot(dir);
   if (!root) throw new Error(`No beads database found at ${dir}.`);
@@ -301,6 +305,8 @@ export async function handleUpdateBead({
   if (priority !== undefined) args.push("-p", String(priority));
   if (assignee !== undefined) args.push("-a", assignee);
   if (status !== undefined) args.push("-s", status);
+  for (const label of cleanLabels(addLabels)) args.push("--add-label", label);
+  for (const label of cleanLabels(removeLabels)) args.push("--remove-label", label);
 
   const result = await runBdText(root, args, 30_000);
   const message = result
@@ -335,6 +341,11 @@ function firstLines(text: string, count: number): string {
     .filter((line) => line.length > 0)
     .slice(0, count)
     .join(" ");
+}
+
+function cleanLabels(labels: string[] | undefined): string[] {
+  if (!labels) return [];
+  return [...new Set(labels.map((label) => label.trim()).filter((label) => label.length > 0))];
 }
 
 function columnIsDone(status: string): boolean {

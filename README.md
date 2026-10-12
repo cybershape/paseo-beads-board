@@ -131,7 +131,7 @@ tests/                unit tests for the status mapping and board normalization
 | `beads.board`    | `bd list`, `bd statuses --json`, `bd where --json` |
 | `beads.show`     | `bd show <id> --json`, `bd comments <id> --json` |
 | `beads.create`   | `bd create --json`                      |
-| `beads.update`   | `bd update` / `bd close` / `bd reopen`  |
+| `beads.update`   | `bd update` / `bd close` / `bd reopen`, including `--add-label` / `--remove-label` |
 | `beads.comment`  | `bd comment`                            |
 | `beads.search`   | `bd list --json --brief --all`          |
 

@@ -182,6 +182,10 @@ export const updateBead = defineRpc({
     reason: z.string().optional(),
     /** Close past beads' claim, gate, and open-children guards. */
     force: z.boolean().optional(),
+    /** Added with `bd update --add-label`. */
+    addLabels: z.array(z.string()).optional(),
+    /** Removed with `bd update --remove-label`. */
+    removeLabels: z.array(z.string()).optional(),
   }),
   output: z.object({ ok: z.boolean(), message: z.string().default("") }),
 });

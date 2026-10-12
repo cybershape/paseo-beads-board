@@ -21,6 +21,7 @@ export interface BeadDetailProps {
   /** Constraints beads will refuse the close on, shown in the confirmation. */
   closeWarnings: string[];
   onSave(fields: { title?: string; description?: string; notes?: string; assignee?: string; priority?: number }): void;
+  onLabels(change: { add: string[]; remove: string[] }): void;
   onComment(text: string): void;
   description: string | null;
   design: string | null;
@@ -30,7 +31,7 @@ export interface BeadDetailProps {
 }
 
 export function BeadDetail(props: BeadDetailProps) {
-  const { bead, statuses, theme, compact, busy, onClose, onMove, onSave, onComment, openInPaseo } = props;
+  const { bead, statuses, theme, compact, busy, onClose, onMove, onSave, onLabels, onComment, openInPaseo } = props;
   const [confirmClose, setConfirmClose] = useState(false);
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
   const toast = useToast();
@@ -41,6 +42,7 @@ export function BeadDetail(props: BeadDetailProps) {
   const [priority, setPriority] = useState(String(bead.priority));
   const [reason, setReason] = useState("");
   const [comment, setComment] = useState("");
+  const [labelDraft, setLabelDraft] = useState("");
 
   async function copyId() {
     try {
@@ -68,6 +70,21 @@ export function BeadDetail(props: BeadDetailProps) {
       return;
     }
     onMove("closed", reason.trim(), false);
+  }
+
+  function addLabels() {
+    const existing = new Set(bead.labels);
+    const add = [
+      ...new Set(
+        labelDraft
+          .split(",")
+          .map((label) => label.trim())
+          .filter((label) => label.length > 0 && !existing.has(label)),
+      ),
+    ];
+    if (add.length === 0) return;
+    onLabels({ add, remove: [] });
+    setLabelDraft("");
   }
 
   function submitComment() {
@@ -106,6 +123,48 @@ export function BeadDetail(props: BeadDetailProps) {
           <Pressable accessibilityRole="button" accessibilityLabel="Copy bead ID" onPress={() => void copyId()}>
             <Icon name="Copy" size={16} color={theme.colors.foregroundMuted} />
           </Pressable>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Labels</Text>
+          {bead.labels.length === 0 ? <Text style={styles.muted}>No labels yet.</Text> : null}
+          <View style={styles.wrapRow}>
+            {bead.labels.map((label) => (
+              <View key={label} style={styles.chip}>
+                <Text style={styles.chipText}>{label}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove label ${label}`}
+                  disabled={busy}
+                  hitSlop={6}
+                  onPress={() => onLabels({ add: [], remove: [label] })}
+                >
+                  <Text style={styles.chipRemove}>×</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+          <View style={styles.sectionRow}>
+            <TextInput
+              value={labelDraft}
+              onChangeText={setLabelDraft}
+              autoCapitalize="none"
+              autoCorrect={false}
+              onSubmitEditing={addLabels}
+              placeholder="Add label"
+              placeholderTextColor={theme.colors.foregroundMuted}
+              style={[styles.input, styles.flex]}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add label"
+              disabled={busy || labelDraft.trim().length === 0}
+              onPress={addLabels}
+              style={[styles.secondary, styles.labelAdd, busy ? styles.disabled : null]}
+            >
+              <Text style={styles.secondaryText}>Add</Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -361,11 +420,16 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     flex: { flex: 1 },
     label: { color: theme.colors.foregroundMuted, fontSize: 11, textTransform: "uppercase" },
     chip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
       backgroundColor: theme.colors.surface2,
       borderRadius: 6,
       paddingHorizontal: 8,
       paddingVertical: 2,
     },
+    chipRemove: { color: theme.colors.foregroundMuted, fontSize: 14, lineHeight: 16 },
+    labelAdd: { paddingHorizontal: 14 },
     warningChip: { backgroundColor: theme.colors.statusWarning },
     chipText: { color: theme.colors.foreground, fontSize: 11 },
     action: {
