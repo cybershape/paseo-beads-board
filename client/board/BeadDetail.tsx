@@ -43,6 +43,7 @@ export function BeadDetail(props: BeadDetailProps) {
   const [reason, setReason] = useState("");
   const [comment, setComment] = useState("");
   const [labelDraft, setLabelDraft] = useState("");
+  const [addingLabel, setAddingLabel] = useState(false);
 
   async function copyId() {
     try {
@@ -85,6 +86,7 @@ export function BeadDetail(props: BeadDetailProps) {
     if (add.length === 0) return;
     onLabels({ add, remove: [] });
     setLabelDraft("");
+    setAddingLabel(false);
   }
 
   function submitComment() {
@@ -126,8 +128,19 @@ export function BeadDetail(props: BeadDetailProps) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Labels</Text>
-          {bead.labels.length === 0 ? <Text style={styles.muted}>No labels yet.</Text> : null}
+          <View style={styles.row}>
+            <Text style={styles.label}>Labels</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add label"
+              disabled={busy}
+              hitSlop={6}
+              onPress={() => setAddingLabel(true)}
+            >
+              <Icon name="Plus" size={14} color={theme.colors.foregroundMuted} />
+            </Pressable>
+          </View>
+          {bead.labels.length === 0 && !addingLabel ? <Text style={styles.muted}>No labels yet.</Text> : null}
           <View style={styles.wrapRow}>
             {bead.labels.map((label) => (
               <View key={label} style={styles.chip}>
@@ -144,27 +157,30 @@ export function BeadDetail(props: BeadDetailProps) {
               </View>
             ))}
           </View>
-          <View style={styles.sectionRow}>
-            <TextInput
-              value={labelDraft}
-              onChangeText={setLabelDraft}
-              autoCapitalize="none"
-              autoCorrect={false}
-              onSubmitEditing={addLabels}
-              placeholder="Add label"
-              placeholderTextColor={theme.colors.foregroundMuted}
-              style={[styles.input, styles.flex]}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Add label"
-              disabled={busy || labelDraft.trim().length === 0}
-              onPress={addLabels}
-              style={[styles.secondary, styles.labelAdd, busy ? styles.disabled : null]}
-            >
-              <Text style={styles.secondaryText}>Add</Text>
-            </Pressable>
-          </View>
+          {addingLabel ? (
+            <View style={styles.sectionRow}>
+              <TextInput
+                value={labelDraft}
+                onChangeText={setLabelDraft}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+                onSubmitEditing={addLabels}
+                placeholder="Add label"
+                placeholderTextColor={theme.colors.foregroundMuted}
+                style={[styles.input, styles.flex]}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Save label"
+                disabled={busy || labelDraft.trim().length === 0}
+                onPress={addLabels}
+                style={[styles.secondary, styles.labelAdd, busy ? styles.disabled : null]}
+              >
+                <Text style={styles.secondaryText}>Add</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.section}>
