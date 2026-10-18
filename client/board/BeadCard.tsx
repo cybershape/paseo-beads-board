@@ -94,8 +94,6 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
         {bead.title}
       </Text>
 
-      {created ? <Text style={styles.created}>{created}</Text> : null}
-
       {bead.childIds.length > 0 ? (
         <View style={styles.epicRow}>
           <View style={styles.progressTrack}>
@@ -122,6 +120,7 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
             <Text style={styles.meta}>{bead.commentCount}</Text>
           </View>
         ) : null}
+        {created ? <Text style={styles.created}>{created}</Text> : null}
         {bead.assignee ? (
           <View style={styles.metaRow}>
             <Icon name="User" size={12} color={theme.colors.foregroundMuted} />

@@ -125,13 +125,17 @@ export function BeadDetail(props: BeadDetailProps) {
               <Text style={styles.chipText}>{bead.badge}</Text>
             </View>
           ) : null}
+          {created ? <Text style={styles.muted}>{created}</Text> : null}
+          {bead.assignee ? (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>{bead.assignee}</Text>
+            </View>
+          ) : null}
           <View style={styles.spacer} />
           <Pressable accessibilityRole="button" accessibilityLabel="Copy bead ID" onPress={() => void copyId()}>
             <Icon name="Copy" size={16} color={theme.colors.foregroundMuted} />
           </Pressable>
         </View>
-
-        {created ? <Text style={styles.muted}>{created}</Text> : null}
 
         {bead.blocked || bead.blockedBy.length > 0 ? (
           <View style={styles.section}>
