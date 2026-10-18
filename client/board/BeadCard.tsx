@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View, StyleSheet } from "react-native";
 import type { PluginTheme } from "@getpaseo/plugin";
 import type { Bead } from "../../shared/beads";
+import { formatCreatedAt } from "./time";
 
 const PRIORITY_COLORS: Record<string, string> = {
   "0": "#ef4444",
@@ -24,6 +25,7 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
   const [showHint, setShowHint] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const created = formatCreatedAt(bead.createdAt);
   const progress = bead.childIds.length > 0 ? bead.closedChildCount / bead.childIds.length : 0;
   const priorityColor = PRIORITY_COLORS[String(bead.priority)] ?? PRIORITY_COLORS["2"];
 
@@ -91,6 +93,8 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
       <Text style={styles.title} numberOfLines={3} selectable>
         {bead.title}
       </Text>
+
+      {created ? <Text style={styles.created}>{created}</Text> : null}
 
       {bead.childIds.length > 0 ? (
         <View style={styles.epicRow}>
@@ -190,6 +194,7 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     badgeText: { color: theme.colors.foregroundMuted, fontSize: 10 },
     iconButton: { padding: 2 },
     title: { color: theme.colors.foreground, fontSize: 13, fontWeight: "500" },
+    created: { color: theme.colors.foregroundMuted, fontSize: 10 },
     epicRow: { flexDirection: "row", alignItems: "center", gap: 6 },
     progressTrack: {
       flex: 1,

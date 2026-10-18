@@ -6,6 +6,7 @@ import { test } from "vitest";
 
 import { enrichBrRows, issuesFromList, mergeShownBead, normalizeBoard, type RawBead } from "../server/beads";
 import { findBeadsRoot, hasBeadsDatabase } from "../server/br";
+import { formatCreatedAt } from "../client/board/time";
 import { columnForStatus, statusNameForColumn } from "../shared/beads";
 
 function scratch(): string {
@@ -22,6 +23,13 @@ test("hasBeadsDatabase needs a real database, not just a .beads directory", () =
   writeFileSync(path.join(root, ".beads", "config.yaml"), "issue_prefix: demo\n");
   assert.equal(hasBeadsDatabase(root), true);
   assert.equal(findBeadsRoot(path.join(root, "apps", "web", "src")), root, "nested dirs resolve to the database root");
+});
+
+test("formatCreatedAt renders local YYYY-MM-DD HH:mm:ss", () => {
+  const date = new Date(2026, 9, 9, 6, 43, 10);
+  assert.equal(formatCreatedAt(date.toISOString()), "2026-10-09 06:43:10");
+  assert.equal(formatCreatedAt(null), null);
+  assert.equal(formatCreatedAt("not-a-date"), null);
 });
 
 test("columnForStatus maps the status vocabulary onto board columns", () => {

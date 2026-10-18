@@ -9,6 +9,7 @@ import {
   type Bead,
   type StatusInfo,
 } from "../../shared/beads";
+import { formatCreatedAt } from "./time";
 
 export interface BeadDetailProps {
   bead: Bead;
@@ -46,6 +47,7 @@ export function BeadDetail(props: BeadDetailProps) {
   const [comment, setComment] = useState("");
   const [labelDraft, setLabelDraft] = useState("");
   const [addingLabel, setAddingLabel] = useState(false);
+  const created = formatCreatedAt(bead.createdAt);
 
   async function copyId() {
     try {
@@ -128,6 +130,8 @@ export function BeadDetail(props: BeadDetailProps) {
             <Icon name="Copy" size={16} color={theme.colors.foregroundMuted} />
           </Pressable>
         </View>
+
+        {created ? <Text style={styles.muted}>{created}</Text> : null}
 
         {bead.blocked || bead.blockedBy.length > 0 ? (
           <View style={styles.section}>

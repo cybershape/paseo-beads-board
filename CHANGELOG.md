@@ -17,6 +17,7 @@ the Go `bd` CLI. `bd`'s embedded Dolt database was too slow for the polling boar
   no `-a`). `br` has no `statuses` command; move targets are the built-in status names, with
   `in_review` preferred.
 - A project database is also recognized when `.beads/beads.db` is present.
+- Board cards and the bead detail show the creation time as local `YYYY-MM-DD HH:mm:ss`.
 
 ## 0.1.1
 
