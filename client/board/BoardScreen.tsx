@@ -158,7 +158,7 @@ export function BoardScreen({
     assignee?: string;
     priority?: number;
   }) {
-    if (!selectedPath || !selectedBeadId) return;
+    if (!selectedPath || !selectedBeadId || shownDetail?.bead.column === "closed") return;
     run(
       actions.updateBead.mutateAsync({ path: selectedPath, id: selectedBeadId, ...fields }),
       `${selectedBeadId} saved`,

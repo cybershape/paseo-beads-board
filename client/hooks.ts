@@ -130,12 +130,14 @@ export interface BoardView {
 export function groupByColumn(beads: Board["beads"]): Record<Column, Board["beads"]> {
   const grouped: Record<Column, Board["beads"]> = { open: [], in_progress: [], in_review: [], closed: [] };
   for (const bead of beads) grouped[bead.column].push(bead);
-  const byPriority = (a: (typeof beads)[number], b: (typeof beads)[number]) =>
-    a.priority - b.priority || a.id.localeCompare(b.id, undefined, { numeric: true });
-  const byRecent = (a: (typeof beads)[number], b: (typeof beads)[number]) =>
-    (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "") || a.id.localeCompare(b.id, undefined, { numeric: true });
+  // Priority first (lower number is higher priority). Same priority: newest activity on top.
+  const stamp = (bead: (typeof beads)[number]) => bead.updatedAt ?? bead.createdAt ?? "";
+  const byPriorityThenRecent = (a: (typeof beads)[number], b: (typeof beads)[number]) =>
+    a.priority - b.priority ||
+    stamp(b).localeCompare(stamp(a)) ||
+    a.id.localeCompare(b.id, undefined, { numeric: true });
   for (const column of COLUMN_ORDER) {
-    grouped[column].sort(column === "closed" ? byRecent : byPriority);
+    grouped[column].sort(byPriorityThenRecent);
   }
   return grouped;
 }

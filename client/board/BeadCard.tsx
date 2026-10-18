@@ -5,13 +5,28 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import type { Bead } from "../../shared/beads";
 import { formatCreatedAt } from "./time";
 
-const PRIORITY_COLORS: Record<string, string> = {
-  "0": "#ef4444",
-  "1": "#f97316",
-  "2": "#eab308",
-  "3": "#3b82f6",
-  "4": "#64748b",
+/** Light-theme chips: Tailwind 500. Dark-theme chips are lighter so they read on surface1. */
+const PRIORITY_COLORS: Record<"light" | "dark", Record<string, string>> = {
+  light: { "0": "#ef4444", "1": "#f97316", "2": "#eab308", "3": "#3b82f6", "4": "#64748b" },
+  dark: { "0": "#f87171", "1": "#fb923c", "2": "#facc15", "3": "#60a5fa", "4": "#94a3b8" },
 };
+
+/** Relative luminance of a #rrggbb color. Used to pick chip text and detect dark themes. */
+function luminance(hex: string): number {
+  const value = Number.parseInt(hex.replace("#", ""), 16);
+  if (Number.isNaN(value) || hex.length < 7) return 1;
+  const channel = (shift: number) => {
+    const srgb = ((value >> shift) & 0xff) / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0);
+}
+
+function priorityChip(priority: number, surface: string): { background: string; text: string } {
+  const palette = luminance(surface) < 0.4 ? PRIORITY_COLORS.dark : PRIORITY_COLORS.light;
+  const background = palette[String(priority)] ?? palette["2"]!;
+  return { background, text: luminance(background) > 0.45 ? "#1c1917" : "#ffffff" };
+}
 
 export interface BeadCardProps {
   bead: Bead;
@@ -27,7 +42,7 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const created = formatCreatedAt(bead.createdAt);
   const progress = bead.childIds.length > 0 ? bead.closedChildCount / bead.childIds.length : 0;
-  const priorityColor = PRIORITY_COLORS[String(bead.priority)] ?? PRIORITY_COLORS["2"];
+  const priority = priorityChip(bead.priority, theme.colors.surface1);
 
   useEffect(() => {
     return () => {
@@ -66,8 +81,8 @@ export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardPr
       ]}
     >
       <View style={styles.header}>
-        <View style={[styles.priority, { backgroundColor: priorityColor }]}>
-          <Text style={styles.priorityText}>P{bead.priority}</Text>
+        <View style={[styles.priority, { backgroundColor: priority.background }]}>
+          <Text style={[styles.priorityText, { color: priority.text }]}>P{bead.priority}</Text>
         </View>
         <Text style={styles.id} numberOfLines={1}>
           {bead.id}
@@ -182,7 +197,7 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     header: { flexDirection: "row", alignItems: "center", gap: 6 },
     spacer: { flex: 1 },
     priority: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-    priorityText: { color: "#ffffff", fontSize: 10, fontWeight: "700" },
+    priorityText: { fontSize: 10, fontWeight: "700" },
     id: { color: theme.colors.foregroundMuted, fontSize: 11 },
     badge: {
       borderRadius: 4,

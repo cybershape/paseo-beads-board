@@ -11,6 +11,8 @@ import {
 } from "../../shared/beads";
 import { formatCreatedAt } from "./time";
 
+const PRIORITY_OPTIONS = [0, 1, 2, 3, 4] as const;
+
 export interface BeadDetailProps {
   bead: Bead;
   statuses: StatusInfo[];
@@ -43,12 +45,14 @@ export function BeadDetail(props: BeadDetailProps) {
   const [description, setDescription] = useState(props.description ?? "");
   const [notes, setNotes] = useState(props.notes ?? "");
   const [assignee, setAssignee] = useState(bead.assignee ?? "");
-  const [priority, setPriority] = useState(String(bead.priority));
+  const [priority, setPriority] = useState(Math.min(4, Math.max(0, bead.priority)));
+  const [priorityOpen, setPriorityOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [comment, setComment] = useState("");
   const [labelDraft, setLabelDraft] = useState("");
   const [addingLabel, setAddingLabel] = useState(false);
   const created = formatCreatedAt(bead.createdAt);
+  const locked = bead.column === "closed";
 
   async function copyId() {
     try {
@@ -60,13 +64,13 @@ export function BeadDetail(props: BeadDetailProps) {
   }
 
   function save() {
-    const nextPriority = Number.parseInt(priority, 10);
+    if (locked) return;
     onSave({
       title: title.trim() || bead.title,
       description,
       notes,
       assignee: assignee.trim(),
-      priority: Number.isNaN(nextPriority) ? bead.priority : Math.min(4, Math.max(0, nextPriority)),
+      priority,
     });
   }
 
@@ -264,7 +268,8 @@ export function BeadDetail(props: BeadDetailProps) {
           <TextInput
             value={title}
             onChangeText={setTitle}
-            style={styles.input}
+            editable={!locked}
+            style={[styles.input, locked ? styles.disabled : null]}
             placeholder="Title"
             placeholderTextColor={theme.colors.foregroundMuted}
           />
@@ -275,7 +280,8 @@ export function BeadDetail(props: BeadDetailProps) {
           <TextInput
             value={description}
             onChangeText={setDescription}
-            style={[styles.input, styles.multiline]}
+            editable={!locked}
+            style={[styles.input, styles.multiline, locked ? styles.disabled : null]}
             multiline
             placeholder="What needs to happen?"
             placeholderTextColor={theme.colors.foregroundMuted}
@@ -285,22 +291,27 @@ export function BeadDetail(props: BeadDetailProps) {
         <View style={styles.sectionRow}>
           <View style={[styles.section, styles.flex]}>
             <Text style={styles.label}>Priority</Text>
-            <TextInput
-              value={priority}
-              onChangeText={setPriority}
-              keyboardType="number-pad"
-              style={styles.input}
-              placeholder="0-4"
-              placeholderTextColor={theme.colors.foregroundMuted}
-            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Priority P${priority}`}
+              disabled={locked || busy}
+              onPress={() => {
+                if (!locked) setPriorityOpen(true);
+              }}
+              style={[styles.input, styles.dropdown, busy ? styles.disabled : null]}
+            >
+              <Text style={styles.dropdownText}>P{priority}</Text>
+              <Icon name="ChevronDown" size={14} color={theme.colors.foregroundMuted} />
+            </Pressable>
           </View>
           <View style={[styles.section, styles.flex]}>
             <Text style={styles.label}>Assignee</Text>
             <TextInput
               value={assignee}
               onChangeText={setAssignee}
+              editable={!locked}
               autoCapitalize="none"
-              style={styles.input}
+              style={[styles.input, locked ? styles.disabled : null]}
               placeholder="unassigned"
               placeholderTextColor={theme.colors.foregroundMuted}
             />
@@ -310,9 +321,9 @@ export function BeadDetail(props: BeadDetailProps) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Save bead"
-          disabled={busy}
+          disabled={locked || busy}
           onPress={save}
-          style={[styles.primary, busy ? styles.disabled : null]}
+          style={[styles.primary, locked || busy ? styles.disabled : null]}
         >
           <Text style={styles.primaryText}>Save changes</Text>
         </Pressable>
@@ -388,6 +399,33 @@ export function BeadDetail(props: BeadDetailProps) {
           </Pressable>
         ) : null}
       </Modal.Content>
+
+      <Modal
+        title="Priority"
+        icon={<Icon name="ChevronDown" size={18} color={theme.colors.foreground} />}
+        open={priorityOpen}
+        onOpenChange={setPriorityOpen}
+      >
+        <Modal.Content style={styles.confirmBody}>
+          {PRIORITY_OPTIONS.map((option) => {
+            const active = option === priority;
+            return (
+              <Pressable
+                key={option}
+                accessibilityRole="button"
+                accessibilityLabel={`Set priority P${option}`}
+                onPress={() => {
+                  setPriority(option);
+                  setPriorityOpen(false);
+                }}
+                style={[styles.priorityOption, active ? styles.actionActive : null]}
+              >
+                <Text style={active ? styles.actionActiveText : styles.actionText}>P{option}</Text>
+              </Pressable>
+            );
+          })}
+        </Modal.Content>
+      </Modal>
 
       <Modal
         title="Close anyway?"
@@ -504,6 +542,15 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingHorizontal: 10,
       paddingVertical: 8,
       fontSize: 13,
+    },
+    dropdown: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    dropdownText: { color: theme.colors.foreground, fontSize: 13 },
+    priorityOption: {
+      borderColor: theme.colors.border,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
     },
     multiline: { minHeight: compact ? 88 : 120, textAlignVertical: "top" },
     primary: {

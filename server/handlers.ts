@@ -278,6 +278,13 @@ export async function handleUpdateBead({
   const root = hasBeadsDatabase(dir) ? dir : findBeadsRoot(dir);
   if (!root) throw new Error(`No beads database found at ${dir}.`);
 
+  const current = await runBrJson<{ status?: string }[]>(root, ["show", id, "--json"], 15_000).catch(() => []);
+  const closed = columnIsDone(current[0]?.status ?? "");
+  const editsFields = closed && (title !== undefined || description !== undefined || notes !== undefined || priority !== undefined || assignee !== undefined);
+  if (editsFields) {
+    throw new Error(`${id} is closed. Only comments, labels, and status can change.`);
+  }
+
   if (status && columnIsDone(status)) {
     const closeArgs = ["close", id];
     if (reason?.trim()) closeArgs.push("--reason", reason.trim());
@@ -292,11 +299,7 @@ export async function handleUpdateBead({
   if (status && statusIsOpenLike(status)) {
     // `br reopen` only moves a closed issue; it reports success while skipping
     // anything else, so an in-progress card could never come back to Open.
-    const current = await runBrJson<{ status?: string }[]>(root, ["show", id, "--json"], 15_000).catch(
-      () => [],
-    );
-    const currentStatus = current[0]?.status?.toLowerCase() ?? "";
-    if (columnIsDone(currentStatus)) {
+    if (closed) {
       await runBrText(root, ["reopen", id], 30_000);
       return { ok: true, message: `${id} reopened` };
     }
