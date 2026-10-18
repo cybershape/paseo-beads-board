@@ -36,6 +36,7 @@ export function BeadDetail(props: BeadDetailProps) {
   const { bead, statuses, theme, compact, busy, onClose, onMove, onSave, onLabels, onOpen, onComment, openInPaseo } =
     props;
   const [confirmClose, setConfirmClose] = useState(false);
+  const [closing, setClosing] = useState(false);
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
   const toast = useToast();
   const [title, setTitle] = useState(bead.title);
@@ -125,12 +126,12 @@ export function BeadDetail(props: BeadDetailProps) {
               <Text style={styles.chipText}>{bead.badge}</Text>
             </View>
           ) : null}
-          {created ? <Text style={styles.muted}>{created}</Text> : null}
           {bead.assignee ? (
             <View style={styles.chip}>
               <Text style={styles.chipText}>{bead.assignee}</Text>
             </View>
           ) : null}
+          {created ? <Text style={styles.muted}>{created}</Text> : null}
           <View style={styles.spacer} />
           <Pressable accessibilityRole="button" accessibilityLabel="Copy bead ID" onPress={() => void copyId()}>
             <Icon name="Copy" size={16} color={theme.colors.foregroundMuted} />
@@ -224,7 +225,7 @@ export function BeadDetail(props: BeadDetailProps) {
                   accessibilityLabel={`Move to ${COLUMN_TITLES[column]}`}
                   disabled={active || !statusName || busy}
                   onPress={() =>
-                    column === "closed" ? requestClose() : onMove(statusName ?? column, reason.trim(), false)
+                    column === "closed" ? setClosing(true) : onMove(statusName ?? column, reason.trim(), false)
                   }
                   style={[styles.action, active ? styles.actionActive : null, busy ? styles.disabled : null]}
                 >
@@ -235,15 +236,25 @@ export function BeadDetail(props: BeadDetailProps) {
               );
             })}
           </View>
-          {bead.column !== "closed" ? (
+          {closing && bead.column !== "closed" ? (
             <>
               <TextInput
                 value={reason}
                 onChangeText={setReason}
+                autoFocus
                 placeholder="Close reason (optional)"
                 placeholderTextColor={theme.colors.foregroundMuted}
                 style={styles.input}
               />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close bead"
+                disabled={busy}
+                onPress={requestClose}
+                style={[styles.close, busy ? styles.disabled : null]}
+              >
+                <Text style={styles.primaryText}>Close</Text>
+              </Pressable>
             </>
           ) : null}
         </View>
@@ -531,6 +542,7 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     warningRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
     warningText: { color: theme.colors.foreground, fontSize: 12, flexShrink: 1 },
     confirmActions: { flexDirection: "row", gap: 10 },
+    close: { backgroundColor: theme.colors.statusDanger, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
     danger: { flex: 1, backgroundColor: theme.colors.statusDanger, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
   });
 }

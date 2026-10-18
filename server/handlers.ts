@@ -290,8 +290,18 @@ export async function handleUpdateBead({
     return { ok: true, message: `${id} closed` };
   }
   if (status && statusIsOpenLike(status)) {
-    await runBrText(root, ["reopen", id], 30_000);
-    return { ok: true, message: `${id} reopened` };
+    // `br reopen` only moves a closed issue; it reports success while skipping
+    // anything else, so an in-progress card could never come back to Open.
+    const current = await runBrJson<{ status?: string }[]>(root, ["show", id, "--json"], 15_000).catch(
+      () => [],
+    );
+    const currentStatus = current[0]?.status?.toLowerCase() ?? "";
+    if (columnIsDone(currentStatus)) {
+      await runBrText(root, ["reopen", id], 30_000);
+      return { ok: true, message: `${id} reopened` };
+    }
+    await runBrText(root, ["update", id, "--status", "open"], 30_000);
+    return { ok: true, message: `${id} moved to open` };
   }
 
   const args = ["update", id];
