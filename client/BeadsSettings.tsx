@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { preferences } from "../shared/settings";
+import { useFontScale } from "./hooks";
 
 const POLL_OPTIONS = [
   { label: "Off", value: "0" },
@@ -23,6 +24,7 @@ const POLL_OPTIONS = [
 /** Settings → Plugins → Beads board. */
 export function BeadsSettings({ theme }: PluginSurfaceProps) {
   const settings = useSettings(preferences);
+  const fontScale = useFontScale();
   const [draftPath, setDraftPath] = useState("");
 
   if (settings.status !== "ready") {
@@ -72,7 +74,7 @@ export function BeadsSettings({ theme }: PluginSurfaceProps) {
                   color: theme.colors.foreground,
                   paddingHorizontal: 10,
                   paddingVertical: 8,
-                  fontSize: 13,
+                  fontSize: fontScale.body,
                 }}
               />
               <Pressable
@@ -88,7 +90,7 @@ export function BeadsSettings({ theme }: PluginSurfaceProps) {
                   opacity: saving ? 0.5 : 1,
                 }}
               >
-                <Text style={{ color: theme.colors.accentForeground, fontWeight: "600", fontSize: 13 }}>
+                <Text style={{ color: theme.colors.accentForeground, fontWeight: "600", fontSize: fontScale.body }}>
                   Add project path
                 </Text>
               </Pressable>

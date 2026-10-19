@@ -16,6 +16,8 @@ import {
   usePollIntervalSeconds,
   usePreferences,
   useProjects,
+  useFontScale,
+  type FontScale,
   type CreateBeadInput,
 } from "../hooks";
 import { BeadDetail } from "./BeadDetail";
@@ -44,7 +46,8 @@ export function BoardScreen({
   defaultShowClosed,
   openWorkspace,
 }: BoardScreenProps) {
-  const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
+  const fontScale = useFontScale();
+  const styles = useMemo(() => createStyles(theme, compact, fontScale), [theme, compact, fontScale]);
   const [boardWidth, setBoardWidth] = useState(0);
   const toast = useToast();
   const paseo = usePaseo();
@@ -245,12 +248,14 @@ export function BoardScreen({
           label="Blocked"
           active={onlyBlocked}
           theme={theme}
+          fontScale={fontScale}
           onPress={() => setOnlyBlocked((value: boolean) => !value)}
         />
         <FilterChip
           label="Closed"
           active={showClosed}
           theme={theme}
+          fontScale={fontScale}
           onPress={() => {
             touchedClosed.current = true;
             setShowClosed((value: boolean) => !value);
@@ -415,11 +420,13 @@ function FilterChip({
   label,
   active,
   theme,
+  fontScale,
   onPress,
 }: {
   label: string;
   active: boolean;
   theme: PluginTheme;
+  fontScale: FontScale;
   onPress(): void;
 }) {
   return (
@@ -438,7 +445,7 @@ function FilterChip({
         },
       ]}
     >
-      <Text style={{ color: active ? theme.colors.accentForeground : theme.colors.foregroundMuted, fontSize: 12 }}>
+      <Text style={{ color: active ? theme.colors.accentForeground : theme.colors.foregroundMuted, fontSize: fontScale.secondary }}>
         {label}
       </Text>
     </Pressable>
@@ -458,7 +465,7 @@ function describeError(error: unknown): string {
     .trim();
 }
 
-function createStyles(theme: PluginTheme, compact: boolean) {
+function createStyles(theme: PluginTheme, compact: boolean, fontScale: FontScale) {
   return StyleSheet.create({
     screen: {
       flex: 1,
@@ -479,8 +486,8 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingHorizontal: 10,
       paddingVertical: 8,
     },
-    projectName: { color: theme.colors.foreground, fontSize: 14, fontWeight: "600", flexShrink: 1 },
-    prefix: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    projectName: { color: theme.colors.foreground, fontSize: fontScale.title, fontWeight: "600", flexShrink: 1 },
+    prefix: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
     iconButton: {
       backgroundColor: theme.colors.surface1,
       borderColor: theme.colors.border,
@@ -498,14 +505,14 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       color: theme.colors.foreground,
       paddingHorizontal: 10,
       paddingVertical: 8,
-      fontSize: 13,
+      fontSize: fontScale.body,
     },
     searchWide: { flex: 1 },
     flex: { flex: 1 },
     summary: { flexDirection: "row", alignItems: "center", gap: 16, flexWrap: "wrap" },
     summaryItem: { flexDirection: "row", alignItems: "baseline", gap: 4 },
-    summaryValue: { color: theme.colors.foreground, fontSize: 15, fontWeight: "700" },
-    summaryLabel: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    summaryValue: { color: theme.colors.foreground, fontSize: fontScale.stat, fontWeight: "700" },
+    summaryLabel: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
     tabs: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
     tab: {
       borderRadius: 8,
@@ -515,13 +522,13 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       borderColor: theme.colors.border,
     },
     tabActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-    tabText: { color: theme.colors.foregroundMuted, fontSize: 12 },
-    tabActiveText: { color: theme.colors.accentForeground, fontSize: 12, fontWeight: "600" },
+    tabText: { color: theme.colors.foregroundMuted, fontSize: fontScale.secondary },
+    tabActiveText: { color: theme.colors.accentForeground, fontSize: fontScale.secondary, fontWeight: "600" },
     board: { flex: 1, flexDirection: "row", minWidth: 0, minHeight: 0 },
     boardScroll: { flex: 1, minWidth: 0, minHeight: 0 },
     boardColumns: { flexDirection: "row", gap: COLUMN_GAP, flexGrow: 1 },
-    error: { color: theme.colors.statusDanger, fontSize: 12 },
-    warning: { color: theme.colors.statusWarning, fontSize: 11 },
-    empty: { color: theme.colors.foregroundMuted, fontSize: 12, padding: 8 },
+    error: { color: theme.colors.statusDanger, fontSize: fontScale.secondary },
+    warning: { color: theme.colors.statusWarning, fontSize: fontScale.caption },
+    empty: { color: theme.colors.foregroundMuted, fontSize: fontScale.secondary, padding: 8 },
   });
 }

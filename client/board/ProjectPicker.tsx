@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Pressable, Text, View, StyleSheet } from "react-native";
 import { ScrollView } from "@getpaseo/plugin/client/react-native";
 import type { ProjectSummary } from "../../shared/beads";
+import { useFontScale, type FontScale } from "../hooks";
 
 export interface ProjectPickerProps {
   projects: ProjectSummary[];
@@ -15,7 +16,8 @@ export interface ProjectPickerProps {
 }
 
 export function ProjectPicker({ projects, selectedPath, theme, compact, onSelect, onClose }: ProjectPickerProps) {
-  const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
+  const fontScale = useFontScale();
+  const styles = useMemo(() => createStyles(theme, compact, fontScale), [theme, compact, fontScale]);
 
   return (
     <Modal
@@ -75,7 +77,7 @@ export function ProjectPicker({ projects, selectedPath, theme, compact, onSelect
   );
 }
 
-function createStyles(theme: PluginTheme, compact: boolean) {
+function createStyles(theme: PluginTheme, compact: boolean, fontScale: FontScale) {
   return StyleSheet.create({
     body: { backgroundColor: theme.colors.surface0, flex: 1, minHeight: 0 },
     content: { padding: 12, gap: 8, flex: 1, minHeight: 0 },
@@ -92,13 +94,13 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     rowActive: { borderColor: theme.colors.accent },
     rowPressed: { opacity: 0.75 },
     titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-    name: { color: theme.colors.foreground, fontSize: 14, fontWeight: "600", flexShrink: 1 },
-    prefix: { color: theme.colors.foregroundMuted, fontSize: 11 },
-    path: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    name: { color: theme.colors.foreground, fontSize: fontScale.title, fontWeight: "600", flexShrink: 1 },
+    prefix: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
+    path: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
     counts: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
-    count: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    count: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
     blocked: { color: theme.colors.statusWarning },
-    error: { color: theme.colors.statusDanger, fontSize: 11 },
-    empty: { color: theme.colors.foregroundMuted, fontSize: 12, padding: 8 },
+    error: { color: theme.colors.statusDanger, fontSize: fontScale.caption },
+    empty: { color: theme.colors.foregroundMuted, fontSize: fontScale.secondary, padding: 8 },
   });
 }

@@ -4,6 +4,7 @@ import { Pressable, Text, View, StyleSheet } from "react-native";
 import type { PluginTheme } from "@getpaseo/plugin";
 import type { Bead } from "../../shared/beads";
 import { formatCreatedAt } from "./time";
+import { useFontScale, type FontScale } from "../hooks";
 
 /** Light-theme chips: Tailwind 500. Dark-theme chips are lighter so they read on surface1. */
 const PRIORITY_COLORS: Record<"light" | "dark", Record<string, string>> = {
@@ -37,7 +38,8 @@ export interface BeadCardProps {
 }
 
 export function BeadCard({ bead, theme, compact, onPress, onCopyId }: BeadCardProps) {
-  const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
+  const fontScale = useFontScale();
+  const styles = useMemo(() => createStyles(theme, compact, fontScale), [theme, compact, fontScale]);
   const [showHint, setShowHint] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const created = formatCreatedAt(bead.createdAt);
@@ -167,7 +169,7 @@ function BlockedHint({ bead, styles }: { bead: Bead; styles: Styles }) {
   );
 }
 
-function createStyles(theme: PluginTheme, compact: boolean) {
+function createStyles(theme: PluginTheme, compact: boolean, fontScale: FontScale) {
   return StyleSheet.create({
     card: {
       backgroundColor: theme.colors.surface1,
@@ -193,22 +195,22 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingHorizontal: 8,
       paddingVertical: 6,
     },
-    tooltipText: { color: theme.colors.foreground, fontSize: 11 },
+    tooltipText: { color: theme.colors.foreground, fontSize: fontScale.caption },
     header: { flexDirection: "row", alignItems: "center", gap: 6 },
     spacer: { flex: 1 },
     priority: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-    priorityText: { fontSize: 10, fontWeight: "700" },
-    id: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    priorityText: { fontSize: fontScale.micro, fontWeight: "700" },
+    id: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
     badge: {
       borderRadius: 4,
       paddingHorizontal: 5,
       paddingVertical: 1,
       backgroundColor: theme.colors.surface2,
     },
-    badgeText: { color: theme.colors.foregroundMuted, fontSize: 10 },
+    badgeText: { color: theme.colors.foregroundMuted, fontSize: fontScale.micro },
     iconButton: { padding: 2 },
-    title: { color: theme.colors.foreground, fontSize: 13, fontWeight: "500" },
-    created: { color: theme.colors.foregroundMuted, fontSize: 10 },
+    title: { color: theme.colors.foreground, fontSize: fontScale.body, fontWeight: "500" },
+    created: { color: theme.colors.foregroundMuted, fontSize: fontScale.micro },
     epicRow: { flexDirection: "row", alignItems: "center", gap: 6 },
     progressTrack: {
       flex: 1,
@@ -219,7 +221,7 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       backgroundColor: theme.colors.surface2,
     },
     progressFill: { backgroundColor: theme.colors.statusSuccess },
-    epicText: { color: theme.colors.foregroundMuted, fontSize: 10 },
+    epicText: { color: theme.colors.foregroundMuted, fontSize: fontScale.micro },
     footer: { flexDirection: "row", alignItems: "center", gap: 6 },
     label: {
       backgroundColor: theme.colors.surface2,
@@ -227,8 +229,8 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingHorizontal: 5,
       paddingVertical: 1,
     },
-    labelText: { color: theme.colors.foregroundMuted, fontSize: 10 },
-    meta: { color: theme.colors.foregroundMuted, fontSize: 10 },
+    labelText: { color: theme.colors.foregroundMuted, fontSize: fontScale.micro },
+    meta: { color: theme.colors.foregroundMuted, fontSize: fontScale.micro },
     metaRow: { flexDirection: "row", alignItems: "center", gap: 3 },
   });
 }

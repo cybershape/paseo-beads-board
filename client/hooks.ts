@@ -13,6 +13,7 @@ import {
   type ProjectSummary,
 } from "../shared/beads";
 import { preferences } from "../shared/settings";
+export { useFontScale, computeFontScale, type FontScale } from "./typography";
 
 export function usePreferences() {
   return useSettings(preferences);

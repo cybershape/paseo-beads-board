@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { ScrollView, Text, View, StyleSheet } from "react-native";
 import { COLUMN_TITLES, type Bead, type Column } from "../../shared/beads";
 import { BeadCard } from "./BeadCard";
+import { useFontScale, type FontScale } from "../hooks";
 
 export interface ColumnViewProps {
   column: Column;
@@ -15,7 +16,8 @@ export interface ColumnViewProps {
 }
 
 export function ColumnView({ column, beads, theme, compact, width, onSelectBead, onCopyId }: ColumnViewProps) {
-  const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
+  const fontScale = useFontScale();
+  const styles = useMemo(() => createStyles(theme, compact, fontScale), [theme, compact, fontScale]);
 
   return (
     <View style={[styles.column, width !== undefined ? { width } : null]}>
@@ -50,18 +52,18 @@ export function ColumnView({ column, beads, theme, compact, width, onSelectBead,
   );
 }
 
-function createStyles(theme: PluginTheme, compact: boolean) {
+function createStyles(theme: PluginTheme, compact: boolean, fontScale: FontScale) {
   return StyleSheet.create({
     column: { flex: compact ? 1 : undefined, flexShrink: compact ? 1 : 0, gap: 8 },
     header: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 2 },
-    title: { color: theme.colors.foreground, fontSize: 13, fontWeight: "600" },
+    title: { color: theme.colors.foreground, fontSize: fontScale.body, fontWeight: "600" },
     count: {
       backgroundColor: theme.colors.surface2,
       borderRadius: 8,
       paddingHorizontal: 6,
       paddingVertical: 1,
     },
-    countText: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    countText: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
     scroll: { flex: 1 },
     scrollContent: { gap: 8, paddingBottom: 24, paddingTop: 2 },
     empty: {
@@ -72,6 +74,6 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       padding: 12,
       alignItems: "center",
     },
-    emptyText: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    emptyText: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
   });
 }

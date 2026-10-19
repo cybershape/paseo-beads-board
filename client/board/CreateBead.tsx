@@ -3,6 +3,7 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, TextInput, View, StyleSheet } from "react-native";
 import type { ProjectSummary } from "../../shared/beads";
+import { useFontScale, type FontScale } from "../hooks";
 
 const ISSUE_TYPES = ["task", "bug", "epic", "chore", "feature"];
 
@@ -38,7 +39,8 @@ export function CreateBead({
   onClose,
   onCreate,
 }: CreateBeadProps) {
-  const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
+  const fontScale = useFontScale();
+  const styles = useMemo(() => createStyles(theme, compact, fontScale), [theme, compact, fontScale]);
   const [path, setPath] = useState<string | null>(defaultPath);
   const [projectOpen, setProjectOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -215,7 +217,7 @@ function clampPriority(value: string): number {
   return Math.min(4, Math.max(0, parsed));
 }
 
-function createStyles(theme: PluginTheme, compact: boolean) {
+function createStyles(theme: PluginTheme, compact: boolean, fontScale: FontScale) {
   return StyleSheet.create({
     body: { backgroundColor: theme.colors.surface0, gap: 10 },
     row: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
@@ -231,8 +233,8 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingHorizontal: 10,
       paddingVertical: 8,
     },
-    projectTriggerName: { color: theme.colors.foreground, fontSize: 13, fontWeight: "600", flexShrink: 1 },
-    projectPrefix: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    projectTriggerName: { color: theme.colors.foreground, fontSize: fontScale.body, fontWeight: "600", flexShrink: 1 },
+    projectPrefix: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
     projectList: { maxHeight: 168 },
     projectListContent: { gap: 6 },
     projectOption: {
@@ -246,8 +248,8 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     },
     projectOptionActive: { borderColor: theme.colors.accent },
     projectOptionPressed: { opacity: 0.75 },
-    projectOptionName: { color: theme.colors.foreground, fontSize: 13, fontWeight: "600" },
-    projectOptionPath: { color: theme.colors.foregroundMuted, fontSize: 11 },
+    projectOptionName: { color: theme.colors.foreground, fontSize: fontScale.body, fontWeight: "600" },
+    projectOptionPath: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
     flex: { flex: 1, minWidth: 120 },
     input: {
       backgroundColor: theme.colors.surface2,
@@ -257,7 +259,7 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       color: theme.colors.foreground,
       paddingHorizontal: 10,
       paddingVertical: 8,
-      fontSize: 13,
+      fontSize: fontScale.body,
     },
     multiline: { minHeight: compact ? 72 : 96, textAlignVertical: "top" },
     chip: {
@@ -268,10 +270,10 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingVertical: 6,
     },
     chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-    chipText: { color: theme.colors.foreground, fontSize: 12 },
-    chipActiveText: { color: theme.colors.accentForeground, fontSize: 12, fontWeight: "600" },
+    chipText: { color: theme.colors.foreground, fontSize: fontScale.secondary },
+    chipActiveText: { color: theme.colors.accentForeground, fontSize: fontScale.secondary, fontWeight: "600" },
     primary: { backgroundColor: theme.colors.accent, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
-    primaryText: { color: theme.colors.accentForeground, fontWeight: "600", fontSize: 13 },
+    primaryText: { color: theme.colors.accentForeground, fontWeight: "600", fontSize: fontScale.body },
     disabled: { opacity: 0.5 },
   });
 }

@@ -10,6 +10,7 @@ import {
   type StatusInfo,
 } from "../../shared/beads";
 import { formatCreatedAt } from "./time";
+import { useFontScale, type FontScale } from "../hooks";
 
 const PRIORITY_OPTIONS = [0, 1, 2, 3, 4] as const;
 
@@ -39,7 +40,8 @@ export function BeadDetail(props: BeadDetailProps) {
     props;
   const [confirmClose, setConfirmClose] = useState(false);
   const [closing, setClosing] = useState(false);
-  const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
+  const fontScale = useFontScale();
+  const styles = useMemo(() => createStyles(theme, compact, fontScale), [theme, compact, fontScale]);
   const toast = useToast();
   const [title, setTitle] = useState(bead.title);
   const [description, setDescription] = useState(props.description ?? "");
@@ -498,17 +500,17 @@ function RelationRow({
   );
 }
 
-function createStyles(theme: PluginTheme, compact: boolean) {
+function createStyles(theme: PluginTheme, compact: boolean, fontScale: FontScale) {
   return StyleSheet.create({
     body: { backgroundColor: theme.colors.surface0, gap: 14 },
-    text: { color: theme.colors.foreground, fontSize: 13 },
+    text: { color: theme.colors.foreground, fontSize: fontScale.body },
     row: { flexDirection: "row", alignItems: "center", gap: 6 },
     wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
     spacer: { flex: 1 },
     section: { gap: 6 },
     sectionRow: { flexDirection: "row", gap: 10 },
     flex: { flex: 1 },
-    label: { color: theme.colors.foregroundMuted, fontSize: 11, textTransform: "uppercase" },
+    label: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption, textTransform: "uppercase" },
     chip: {
       flexDirection: "row",
       alignItems: "center",
@@ -518,10 +520,10 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingHorizontal: 8,
       paddingVertical: 2,
     },
-    chipRemove: { color: theme.colors.foregroundMuted, fontSize: 14, lineHeight: 16 },
+    chipRemove: { color: theme.colors.foregroundMuted, fontSize: fontScale.title, lineHeight: fontScale.title + 2 },
     labelAdd: { paddingHorizontal: 14 },
     warningChip: { backgroundColor: theme.colors.statusWarning },
-    chipText: { color: theme.colors.foreground, fontSize: 11 },
+    chipText: { color: theme.colors.foreground, fontSize: fontScale.caption },
     action: {
       borderColor: theme.colors.border,
       borderWidth: 1,
@@ -530,8 +532,8 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingVertical: 6,
     },
     actionActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-    actionText: { color: theme.colors.foreground, fontSize: 12 },
-    actionActiveText: { color: theme.colors.accentForeground, fontSize: 12, fontWeight: "600" },
+    actionText: { color: theme.colors.foreground, fontSize: fontScale.secondary },
+    actionActiveText: { color: theme.colors.accentForeground, fontSize: fontScale.secondary, fontWeight: "600" },
     disabled: { opacity: 0.5 },
     input: {
       backgroundColor: theme.colors.surface2,
@@ -541,10 +543,10 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       color: theme.colors.foreground,
       paddingHorizontal: 10,
       paddingVertical: 8,
-      fontSize: 13,
+      fontSize: fontScale.body,
     },
     dropdown: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    dropdownText: { color: theme.colors.foreground, fontSize: 13 },
+    dropdownText: { color: theme.colors.foreground, fontSize: fontScale.body },
     priorityOption: {
       borderColor: theme.colors.border,
       borderWidth: 1,
@@ -559,7 +561,7 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingVertical: 10,
       alignItems: "center",
     },
-    primaryText: { color: theme.colors.accentForeground, fontWeight: "600", fontSize: 13 },
+    primaryText: { color: theme.colors.accentForeground, fontWeight: "600", fontSize: fontScale.body },
     secondary: {
       borderColor: theme.colors.border,
       borderWidth: 1,
@@ -567,8 +569,8 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingVertical: 8,
       alignItems: "center",
     },
-    secondaryText: { color: theme.colors.foreground, fontSize: 13 },
-    muted: { color: theme.colors.foregroundMuted, fontSize: 12 },
+    secondaryText: { color: theme.colors.foreground, fontSize: fontScale.body },
+    muted: { color: theme.colors.foregroundMuted, fontSize: fontScale.secondary },
     relation: {
       flexDirection: "row",
       alignItems: "center",
@@ -578,16 +580,16 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       paddingHorizontal: 8,
       paddingVertical: 4,
     },
-    relationLabel: { color: theme.colors.foregroundMuted, fontSize: 11 },
-    relationValue: { color: theme.colors.foreground, fontSize: 12 },
+    relationLabel: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
+    relationValue: { color: theme.colors.foreground, fontSize: fontScale.secondary },
     comment: { gap: 2 },
-    commentMeta: { color: theme.colors.foregroundMuted, fontSize: 11 },
-    link: { color: theme.colors.accent, fontSize: 13 },
+    commentMeta: { color: theme.colors.foregroundMuted, fontSize: fontScale.caption },
+    link: { color: theme.colors.accent, fontSize: fontScale.body },
     confirmBody: { backgroundColor: theme.colors.surface0, gap: 12 },
     confirmList: { maxHeight: 200 },
     confirmListContent: { gap: 8 },
     warningRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
-    warningText: { color: theme.colors.foreground, fontSize: 12, flexShrink: 1 },
+    warningText: { color: theme.colors.foreground, fontSize: fontScale.secondary, flexShrink: 1 },
     confirmActions: { flexDirection: "row", gap: 10 },
     close: { backgroundColor: theme.colors.statusDanger, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
     danger: { flex: 1, backgroundColor: theme.colors.statusDanger, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
